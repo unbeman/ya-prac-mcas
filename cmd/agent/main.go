@@ -28,11 +28,11 @@ func SendPostRequest(ctx context.Context, client http.Client, url string, body i
 		log.Fatalln(err)
 	}
 	response, err := client.Do(request)
-	log.Printf("SEND POST url:%v", url)
-	defer response.Body.Close()
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err) //TODO: retry request?
+		return
 	}
+	defer response.Body.Close()
 	_, err = io.Copy(io.Discard, response.Body)
 	if err != nil {
 		fmt.Println(err)
@@ -77,8 +77,8 @@ func DoWork(ctx context.Context) { // TODO: rename
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, os.Interrupt)
 	defer func() {
-		log.Println("Agent cancelled")
 		cancel()
+		log.Println("Agent cancelled")
 	}()
 	DoWork(ctx)
 	<-ctx.Done()
