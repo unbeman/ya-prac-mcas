@@ -46,7 +46,7 @@ func Report(ctx context.Context, client http.Client, metrics map[string]metrics.
 	var wg sync.WaitGroup
 	wg.Add(len(metrics))
 	for _, metric := range metrics {
-		url := utils.FormatUrl(reportAddr, metric.GetType(), metric.GetName(), metric.GetValue())
+		url := utils.FormatURL(reportAddr, metric.GetType(), metric.GetName(), metric.GetValue())
 		go func() {
 			SendPostRequest(ctx2, client, url, nil)
 			wg.Done()
