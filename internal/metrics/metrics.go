@@ -27,7 +27,7 @@ func (g *gauge) GetName() string {
 }
 
 func (g *gauge) GetValue() string {
-	return fmt.Sprintf("%v", g.value)
+	return fmt.Sprintf("%f", g.value)
 }
 
 func (g *gauge) GetType() string {
@@ -62,7 +62,7 @@ func (c *counter) GetName() string {
 }
 
 func (c *counter) GetValue() string {
-	return fmt.Sprintf("%v", c.value)
+	return fmt.Sprintf("%d", c.value)
 }
 
 func (c *counter) GetType() string {
