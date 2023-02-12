@@ -21,15 +21,14 @@ const (
 	reportInterval = 10 * time.Second
 )
 
-// TODO: http connector
-func SendPostRequest(ctx context.Context, client http.Client, url string, body io.Reader) {
+func SendPostRequest(ctx context.Context, client http.Client, url string, body io.Reader) { // TODO: write http connector
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
 	request.Header.Set("Content-Type", "text/plain")
 	if err != nil {
 		log.Fatalln(err)
 	}
 	response, err := client.Do(request)
-	log.Printf("SEND POST url:%v\tbody:%v", url, body)
+	log.Printf("SEND POST url:%v", url)
 	defer response.Body.Close()
 	if err != nil {
 		log.Fatalln(err)
@@ -38,7 +37,7 @@ func SendPostRequest(ctx context.Context, client http.Client, url string, body i
 	if err != nil {
 		fmt.Println(err)
 	}
-	log.Printf("Received status code: %v for the post requets", response.StatusCode)
+	log.Printf("Received status code: %v for post request to %v", response.StatusCode, url)
 }
 
 func Report(ctx context.Context, client http.Client, metrics map[string]metrics.Metric) {
