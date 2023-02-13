@@ -11,12 +11,11 @@ const (
 	ServerAddress = "localhost:8080"
 )
 
-func main() {
+func main() { //TODO: more logs
 	mux := http.NewServeMux()
 	storage := ram.NewRAMStorage()
 	server := handlers.NewCollectorServer(storage)
 	mux.HandleFunc("/update/", server.UpdateHandler)
 	handler := handlers.Logging(mux)
 	log.Fatal(http.ListenAndServe(ServerAddress, handler))
-
 }

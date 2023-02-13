@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-type ramStorage struct { //TODO: threadsafe
+type ramStorage struct {
 	sync.RWMutex
 	repo map[string]metrics.Metric
 }

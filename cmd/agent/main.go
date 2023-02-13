@@ -33,7 +33,7 @@ func Report(ctx context.Context, cm agent.ClientMetric, ms map[string]metrics.Me
 	wg.Wait()
 }
 
-func DoWork(ctx context.Context, clientMetic agent.ClientMetric) { // TODO: rename
+func DoWork(ctx context.Context, clientMetic agent.ClientMetric) {
 	log.Println("Agent started")
 	reportTicker := time.NewTicker(reportInterval)
 	pollTicker := time.NewTicker(pollInterval)

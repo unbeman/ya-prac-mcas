@@ -23,7 +23,7 @@ func NewClientMetric(addr string, cli http.Client) *clientMetric {
 	return &clientMetric{addr: addr, client: cli}
 }
 
-func (cs clientMetric) SendMetric(ctx context.Context, m metrics.Metric) { // TODO: write http connector
+func (cs clientMetric) SendMetric(ctx context.Context, m metrics.Metric) { //TODO: write http connector
 	url := parser.FormatURL(cs.addr, m)
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
 	request.Header.Set("Content-Type", "text/plain")
