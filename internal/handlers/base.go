@@ -41,7 +41,7 @@ func (cs *CollectorServer) UpdateHandler(w http.ResponseWriter, req *http.Reques
 	if err != nil {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(500)
-		http.Error(w, fmt.Sprint("Storage error"), http.StatusInternalServerError)
+		http.Error(w, "Storage error", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "text/plain")
