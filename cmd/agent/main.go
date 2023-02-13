@@ -2,10 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"github.com/unbeman/ya-prac-mcas/internal/agent"
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
-	"github.com/unbeman/ya-prac-mcas/internal/utils"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -21,55 +19,34 @@ const (
 	reportInterval = 10 * time.Second
 )
 
-func SendPostRequest(ctx context.Context, client http.Client, url string, body io.Reader) { // TODO: write http connector
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
-	request.Header.Set("Content-Type", "text/plain")
-	if err != nil {
-		log.Fatalln(err)
-	}
-	response, err := client.Do(request)
-	if err != nil {
-		log.Println(err) //TODO: retry request?
-		return
-	}
-	defer response.Body.Close()
-	_, err = io.Copy(io.Discard, response.Body)
-	if err != nil {
-		fmt.Println(err)
-	}
-	log.Printf("Received status code: %v for post request to %v", response.StatusCode, url)
-}
-
-func Report(ctx context.Context, client http.Client, metrics map[string]metrics.Metric) {
+func Report(ctx context.Context, cm agent.ClientMetric, ms map[string]metrics.Metric) {
 	ctx2, cancel := context.WithCancel(ctx)
 	defer cancel()
 	var wg sync.WaitGroup
-	wg.Add(len(metrics))
-	for _, metric := range metrics {
-		url := utils.FormatURL(reportAddr, metric.GetType(), metric.GetName(), metric.GetValue())
-		go func() {
-			SendPostRequest(ctx2, client, url, nil)
+	wg.Add(len(ms))
+	for _, metric := range ms {
+		go func(m metrics.Metric) {
+			cm.SendMetric(ctx2, m)
 			wg.Done()
-		}()
+		}(metric)
 	}
 	wg.Wait()
 }
 
-func DoWork(ctx context.Context) { // TODO: rename
+func DoWork(ctx context.Context, clientMetic agent.ClientMetric) { // TODO: rename
 	log.Println("Agent started")
 	reportTicker := time.NewTicker(reportInterval)
 	pollTicker := time.NewTicker(pollInterval)
-	am := metrics.NewAgentMetrics()
-	client := http.Client{}
+	am := agent.NewAgentMetrics()
 	for {
 		select {
 		case <-ctx.Done():
 			log.Println("Worker stopped by context")
 			return
 		case <-reportTicker.C:
-			Report(ctx, client, am.GetMetrics())
+			Report(ctx, clientMetic, am.GetMetrics())
 		case <-pollTicker.C:
-			metrics.UpdateMetrics(am)
+			agent.UpdateMetrics(am)
 		}
 	}
 }
@@ -80,6 +57,8 @@ func main() {
 		cancel()
 		log.Println("Agent cancelled")
 	}()
-	DoWork(ctx)
+	cm := agent.NewClientMetric(reportAddr, http.Client{})
+
+	DoWork(ctx, cm)
 	<-ctx.Done()
 }
