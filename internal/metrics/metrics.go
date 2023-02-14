@@ -4,6 +4,11 @@ import (
 	"fmt"
 )
 
+const (
+	GaugeTypeName   = "gauge"
+	CounterTypeName = "counter"
+)
+
 type Metric interface {
 	GetName() string
 	GetValue() string
@@ -19,16 +24,20 @@ type gauge struct {
 	value float64
 }
 
+func (g *gauge) String() string {
+	return fmt.Sprintf("gauge %v: %v", g.GetName(), g.GetValue())
+}
+
 func (g *gauge) GetName() string {
 	return g.name
 }
 
 func (g *gauge) GetValue() string {
-	return fmt.Sprintf("%f", g.value)
+	return fmt.Sprintf("%v", g.value)
 }
 
 func (g *gauge) GetType() string {
-	return "gauge"
+	return GaugeTypeName
 }
 
 func (g *gauge) Set(value float64) {
@@ -39,14 +48,10 @@ func NewGauge(name string) *gauge {
 	return &gauge{name: name}
 }
 
-func NewGaugeWithValue(name string, value float64) *gauge {
-	return &gauge{name: name, value: value}
-}
-
 type Counter interface {
 	Metric
 	Inc()
-	//Add()
+	Add(value int64)
 }
 
 type counter struct {
@@ -54,8 +59,16 @@ type counter struct {
 	value int64
 }
 
+func (c *counter) String() string {
+	return fmt.Sprintf("counter %v: %v", c.GetName(), c.GetValue())
+}
+
 func (c *counter) Inc() {
 	c.value++
+}
+
+func (c *counter) Add(value int64) {
+	c.value += value
 }
 
 func (c *counter) GetName() string {
@@ -67,13 +80,9 @@ func (c *counter) GetValue() string {
 }
 
 func (c *counter) GetType() string {
-	return "counter"
+	return CounterTypeName
 }
 
 func NewCounter(name string) *counter {
 	return &counter{name: name}
-}
-
-func NewCounterWithValue(name string, value int64) *counter {
-	return &counter{name: name, value: value}
 }

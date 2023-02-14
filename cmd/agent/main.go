@@ -15,8 +15,8 @@ import (
 
 const (
 	reportAddr     = "127.0.0.1:8080"
-	pollInterval   = 2 * time.Second
-	reportInterval = 10 * time.Second
+	pollInterval   = 1 * time.Second
+	reportInterval = 2 * time.Second
 )
 
 func Report(ctx context.Context, cm agent.ClientMetric, ms map[string]metrics.Metric) {
@@ -45,6 +45,7 @@ func DoWork(ctx context.Context, clientMetic agent.ClientMetric) {
 			return
 		case <-reportTicker.C:
 			Report(ctx, clientMetic, am.GetMetrics())
+			am.PollCount = metrics.NewCounter("PollCount")
 		case <-pollTicker.C:
 			agent.UpdateMetrics(am)
 		}

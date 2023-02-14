@@ -11,11 +11,9 @@ const (
 	ServerAddress = "localhost:8080"
 )
 
-func main() { //TODO: more logs
-	mux := http.NewServeMux()
-	storage := ram.NewRAMStorage()
-	server := handlers.NewCollectorServer(storage)
-	mux.HandleFunc("/update/", server.UpdateHandler)
-	handler := handlers.Logging(mux)
-	log.Fatal(http.ListenAndServe(ServerAddress, handler))
+func main() { //TODO: more logs, add signals and context
+	repo := ram.NewRAMStorage()
+	ch := handlers.NewCollectorHandler(repo)
+	log.Println("Server started")
+	log.Fatal(http.ListenAndServe(ServerAddress, ch))
 }
