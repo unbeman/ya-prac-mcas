@@ -32,14 +32,14 @@ func NewAgentMetrics(addr string, pI, rI time.Duration) *agentMetrics {
 		reportInterval: rI}
 }
 
-func (as *agentMetrics) Report(ctx context.Context, ms map[string]metrics.Metric) {
+func (am *agentMetrics) Report(ctx context.Context, ms map[string]metrics.Metric) {
 	ctx2, cancel := context.WithCancel(ctx)
 	defer cancel()
 	var wg sync.WaitGroup
 	for _, metric := range ms {
 		wg.Add(1)
 		go func(m metrics.Metric) {
-			as.SendMetric(ctx2, m)
+			am.SendMetric(ctx2, m)
 			wg.Done()
 		}(metric)
 	}
@@ -64,14 +64,14 @@ func (am *agentMetrics) DoWork(ctx context.Context) {
 	}
 }
 
-func (ma agentMetrics) SendMetric(ctx context.Context, m metrics.Metric) { //TODO: write http connector
-	url := FormatURL(ma.address, m)
+func (am agentMetrics) SendMetric(ctx context.Context, m metrics.Metric) { //TODO: write http connector
+	url := FormatURL(am.address, m)
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	request.Header.Set("Content-Type", "text/plain")
-	response, err := ma.client.Do(request)
+	response, err := am.client.Do(request)
 	if err != nil {
 		log.Println(err)
 		return
