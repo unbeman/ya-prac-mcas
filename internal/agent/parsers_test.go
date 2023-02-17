@@ -1,9 +1,10 @@
-package parser
+package agent
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
-	"testing"
 )
 
 func TestFormatURL(t *testing.T) {

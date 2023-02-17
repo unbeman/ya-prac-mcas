@@ -1,13 +1,14 @@
 package agent
 
 import (
-	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 	"log"
 	"math/rand"
 	"runtime"
+
+	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 )
 
-type AgentMetrics struct {
+type MetricsCollection struct {
 	Alloc         metrics.Gauge
 	BuckHashSys   metrics.Gauge
 	Frees         metrics.Gauge
@@ -39,9 +40,9 @@ type AgentMetrics struct {
 	PollCount     metrics.Counter
 }
 
-func NewAgentMetrics() *AgentMetrics {
+func NewMetricsCollection() *MetricsCollection {
 	log.Println("Metrics CREATED")
-	return &AgentMetrics{
+	return &MetricsCollection{
 		Alloc:         metrics.NewGauge("Alloc"),
 		BuckHashSys:   metrics.NewGauge("BuckHashSys"),
 		Frees:         metrics.NewGauge("Frees"),
@@ -74,7 +75,7 @@ func NewAgentMetrics() *AgentMetrics {
 	}
 }
 
-func UpdateMetrics(am *AgentMetrics) {
+func UpdateMetrics(am *MetricsCollection) {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 	am.Alloc.Set(float64(memStats.Alloc))
@@ -109,7 +110,7 @@ func UpdateMetrics(am *AgentMetrics) {
 	log.Println("Metrics updated")
 }
 
-func (am *AgentMetrics) GetMetrics() map[string]metrics.Metric {
+func (am *MetricsCollection) GetMetrics() map[string]metrics.Metric {
 	metricsMap := map[string]metrics.Metric{}
 	metricsMap[am.Alloc.GetName()] = am.Alloc
 	metricsMap[am.BuckHashSys.GetName()] = am.BuckHashSys

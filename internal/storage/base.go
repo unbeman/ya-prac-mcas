@@ -4,19 +4,23 @@ import (
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 )
 
-//var ErrNotFound = errors.New("not found")
-//var ErrStorage = errors.New("storage error")
+type CounterStorager interface {
+	Set(id string, value int64) // error?
+	Get(id string) metrics.Counter
+	GetAll() []metrics.Counter
+}
 
-type Repository interface { //TODO: rename
-	//Get(id string) (metrics.Metric, error)
-	//Update(id string, metric metrics.Metric) error
-	//Add(id string, metric metrics.Metric) error
-	//Delete(id string) error
-	UpdateCounterRepo(metric metrics.Counter)
-	UpdateGaugeRepo(metric metrics.Gauge)
-	GetAll() (map[string]metrics.Metric, bool)
-	GetCounter(id string) (metrics.Counter, bool)
-	GetGauge(id string) (metrics.Gauge, bool)
-	GetAllCounter() (map[string]metrics.Counter, bool)
-	GetAllGauge() (map[string]metrics.Gauge, bool)
+type GaugeStorager interface {
+	Set(id string, value float64) // error?
+	Get(id string) metrics.Gauge
+	GetAll() []metrics.Gauge
+}
+
+type Repository struct {
+	Gauge   GaugeStorager
+	Counter CounterStorager
+}
+
+func NewRepository(gaugeRepo GaugeStorager, counterRepo CounterStorager) *Repository { //TODO: инициализировать так или передавать их в аргументы?
+	return &Repository{Gauge: gaugeRepo, Counter: counterRepo}
 }

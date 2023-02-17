@@ -1,7 +1,8 @@
-package parser
+package agent
 
 import (
 	"fmt"
+
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 )
 
