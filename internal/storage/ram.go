@@ -6,16 +6,16 @@ import (
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 )
 
-type counterRamStorage struct {
+type counterRAMStorage struct {
 	sync.RWMutex
 	storage map[string]metrics.Counter
 }
 
-func NewCounterRamStorage() *counterRamStorage {
-	return &counterRamStorage{storage: map[string]metrics.Counter{}}
+func NewCounterRAMStorage() *counterRAMStorage {
+	return &counterRAMStorage{storage: map[string]metrics.Counter{}}
 }
 
-func (cs *counterRamStorage) Get(id string) metrics.Counter {
+func (cs *counterRAMStorage) Get(id string) metrics.Counter {
 	cs.RLock()
 	defer cs.RUnlock()
 	if value, ok := cs.storage[id]; !ok {
@@ -25,7 +25,7 @@ func (cs *counterRamStorage) Get(id string) metrics.Counter {
 	}
 }
 
-func (cs *counterRamStorage) GetAll() []metrics.Counter {
+func (cs *counterRAMStorage) GetAll() []metrics.Counter {
 	cs.RLock()
 	defer cs.RUnlock()
 	mSlice := make([]metrics.Counter, 0, len(cs.storage))
@@ -35,7 +35,7 @@ func (cs *counterRamStorage) GetAll() []metrics.Counter {
 	return mSlice
 }
 
-func (cs *counterRamStorage) Set(id string, value int64) { //TODO: return metrics.Counter?
+func (cs *counterRAMStorage) Set(id string, value int64) { //TODO: return metrics.Counter?
 	counter := cs.Get(id)
 	cs.Lock()
 	defer cs.Unlock()
@@ -46,16 +46,16 @@ func (cs *counterRamStorage) Set(id string, value int64) { //TODO: return metric
 	counter.Add(value)
 }
 
-type gaugeRamStorage struct {
+type gaugeRAMStorage struct {
 	sync.RWMutex
 	storage map[string]metrics.Gauge
 }
 
-func NewGaugeRamStorage() *gaugeRamStorage {
-	return &gaugeRamStorage{storage: map[string]metrics.Gauge{}}
+func NewGaugeRAMStorage() *gaugeRAMStorage {
+	return &gaugeRAMStorage{storage: map[string]metrics.Gauge{}}
 }
 
-func (cs *gaugeRamStorage) Get(id string) metrics.Gauge {
+func (cs *gaugeRAMStorage) Get(id string) metrics.Gauge {
 	cs.RLock()
 	defer cs.RUnlock()
 	if value, ok := cs.storage[id]; !ok {
@@ -65,7 +65,7 @@ func (cs *gaugeRamStorage) Get(id string) metrics.Gauge {
 	}
 }
 
-func (cs *gaugeRamStorage) GetAll() []metrics.Gauge {
+func (cs *gaugeRAMStorage) GetAll() []metrics.Gauge {
 	cs.RLock()
 	defer cs.RUnlock()
 	mSlice := make([]metrics.Gauge, 0, len(cs.storage))
@@ -75,7 +75,7 @@ func (cs *gaugeRamStorage) GetAll() []metrics.Gauge {
 	return mSlice
 }
 
-func (cs *gaugeRamStorage) Set(id string, value float64) { //TODO: return metrics.Counter?
+func (cs *gaugeRAMStorage) Set(id string, value float64) { //TODO: return metrics.Counter?
 	gauge := cs.Get(id)
 	cs.Lock()
 	defer cs.Unlock()

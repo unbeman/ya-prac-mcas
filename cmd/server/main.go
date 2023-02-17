@@ -13,7 +13,7 @@ const (
 )
 
 func main() { //TODO: more logs, add signals and context
-	ramRepo := storage.NewRepository(storage.NewGaugeRamStorage(), storage.NewCounterRamStorage())
+	ramRepo := storage.NewRepository(storage.NewGaugeRAMStorage(), storage.NewCounterRAMStorage())
 	ch, err := handlers.NewCollectorHandler(ramRepo)
 	if err != nil {
 		log.Fatalln("Unable to create handler")
