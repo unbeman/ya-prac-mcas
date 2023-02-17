@@ -35,7 +35,7 @@ func (cs *counterRAMStorage) GetAll() []metrics.Counter {
 	return mSlice
 }
 
-func (cs *counterRAMStorage) Set(id string, value int64) { //TODO: return metrics.Counter?
+func (cs *counterRAMStorage) Set(id string, value int64) {
 	counter := cs.Get(id)
 	cs.Lock()
 	defer cs.Unlock()
@@ -75,7 +75,7 @@ func (cs *gaugeRAMStorage) GetAll() []metrics.Gauge {
 	return mSlice
 }
 
-func (cs *gaugeRAMStorage) Set(id string, value float64) { //TODO: return metrics.Counter?
+func (cs *gaugeRAMStorage) Set(id string, value float64) {
 	gauge := cs.Get(id)
 	cs.Lock()
 	defer cs.Unlock()

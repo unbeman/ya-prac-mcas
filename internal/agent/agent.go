@@ -16,7 +16,7 @@ type Sender interface {
 	SendMetric(ctx context.Context, m metrics.Metric)
 }
 
-type agentMetrics struct { //TODO: rename
+type agentMetrics struct {
 	address        string
 	client         http.Client
 	collection     *MetricsCollection

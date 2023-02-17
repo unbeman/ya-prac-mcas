@@ -21,6 +21,6 @@ type Repository struct {
 	Counter CounterStorager
 }
 
-func NewRepository(gaugeRepo GaugeStorager, counterRepo CounterStorager) *Repository { //TODO: инициализировать так или передавать их в аргументы?
+func NewRepository(gaugeRepo GaugeStorager, counterRepo CounterStorager) *Repository {
 	return &Repository{Gauge: gaugeRepo, Counter: counterRepo}
 }
