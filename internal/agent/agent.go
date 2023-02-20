@@ -22,18 +22,21 @@ type agentMetrics struct {
 	collection     *MetricsCollection
 	pollInterval   time.Duration
 	reportInterval time.Duration
+	reportTimeout  time.Duration
 }
 
-func NewAgentMetrics(addr string, pI, rI time.Duration) *agentMetrics {
+func NewAgentMetrics(addr string, clientTimeout, reportTimeout, pollInterval, reportInterval time.Duration) *agentMetrics {
 	return &agentMetrics{address: addr,
-		client:         http.Client{},
+		client:         http.Client{Timeout: clientTimeout},
 		collection:     NewMetricsCollection(),
-		pollInterval:   pI,
-		reportInterval: rI}
+		pollInterval:   pollInterval,
+		reportInterval: reportInterval,
+		reportTimeout:  reportTimeout,
+	}
 }
 
 func (am *agentMetrics) Report(ctx context.Context, ms map[string]metrics.Metric) {
-	ctx2, cancel := context.WithCancel(ctx)
+	ctx2, cancel := context.WithTimeout(ctx, am.reportTimeout)
 	defer cancel()
 	var wg sync.WaitGroup
 	for _, metric := range ms {
