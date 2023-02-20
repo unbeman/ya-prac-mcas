@@ -13,11 +13,8 @@ const (
 )
 
 func main() { //TODO: more logs, add signals and context
-	ramRepo := storage.NewRepository(storage.NewGaugeRAMStorage(), storage.NewCounterRAMStorage())
-	ch, err := handlers.NewCollectorHandler(ramRepo)
-	if err != nil {
-		log.Fatalln("Unable to create handler")
-	}
+	ramRepo := storage.NewRAMRepository()
+	ch := handlers.NewCollectorHandler(ramRepo)
 	log.Println("Server started")
 	log.Fatal(http.ListenAndServe(ServerAddress, ch))
 }

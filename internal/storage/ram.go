@@ -1,10 +1,74 @@
 package storage
 
 import (
+	"fmt"
+	"strconv"
 	"sync"
 
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 )
+
+type RAMRepository struct {
+	counter CounterStorager
+	gauge   GaugeStorager
+}
+
+func NewRAMRepository() *RAMRepository {
+	return &RAMRepository{counter: NewCounterRAMStorage(), gauge: NewGaugeRAMStorage()}
+}
+
+func (rs *RAMRepository) GetMetric(typeM, id string) (metrics.Metric, error) {
+	switch typeM {
+	case metrics.CounterType:
+		counter := rs.counter.Get(id)
+		if counter == nil {
+			return nil, fmt.Errorf("%w: %v", ErrNotFound, id)
+		}
+		return counter, nil
+	case metrics.GaugeType:
+		gauge := rs.gauge.Get(id)
+		if gauge == nil {
+			return nil, fmt.Errorf("%w: %v", ErrNotFound, id)
+		}
+		return gauge, nil
+	default:
+		return nil, fmt.Errorf("%w: %v", ErrInvalidType, typeM)
+	}
+}
+
+func (rs *RAMRepository) SetMetric(typeM, id, value string) error {
+	switch typeM {
+	case metrics.CounterType:
+		cValue, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return fmt.Errorf("%w: %v", ErrInvalidValue, value)
+		}
+		rs.counter.Set(id, cValue)
+	case metrics.GaugeType:
+		gValue, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return fmt.Errorf("%w: %v", ErrInvalidValue, value)
+		}
+		rs.gauge.Set(id, gValue)
+	default:
+		return fmt.Errorf("%w: %v", ErrInvalidType, typeM)
+	}
+	return nil
+}
+
+// не уверена что так правильно делать, в итоге поучается по три прохода по элементам слайсов
+func (rs *RAMRepository) GetAll() []metrics.Metric {
+	counterSlice := rs.counter.GetAll()
+	gaugeSlice := rs.gauge.GetAll()
+	metricSlice := make([]metrics.Metric, 0, len(counterSlice)+len(gaugeSlice))
+	for _, counter := range counterSlice {
+		metricSlice = append(metricSlice, counter)
+	}
+	for _, gauge := range gaugeSlice {
+		metricSlice = append(metricSlice, gauge)
+	}
+	return metricSlice
+}
 
 type counterRAMStorage struct {
 	sync.RWMutex
@@ -15,14 +79,18 @@ func NewCounterRAMStorage() *counterRAMStorage {
 	return &counterRAMStorage{storage: map[string]metrics.Counter{}}
 }
 
+func (cs *counterRAMStorage) get(id string) metrics.Counter {
+	value, ok := cs.storage[id]
+	if !ok {
+		return nil
+	}
+	return value
+}
+
 func (cs *counterRAMStorage) Get(id string) metrics.Counter {
 	cs.RLock()
 	defer cs.RUnlock()
-	if value, ok := cs.storage[id]; !ok {
-		return nil
-	} else {
-		return value
-	}
+	return cs.get(id)
 }
 
 func (cs *counterRAMStorage) GetAll() []metrics.Counter {
@@ -36,9 +104,9 @@ func (cs *counterRAMStorage) GetAll() []metrics.Counter {
 }
 
 func (cs *counterRAMStorage) Set(id string, value int64) {
-	counter := cs.Get(id)
 	cs.Lock()
 	defer cs.Unlock()
+	counter := cs.get(id)
 	if counter == nil {
 		counter = metrics.NewCounter(id)
 		cs.storage[id] = counter
@@ -55,14 +123,18 @@ func NewGaugeRAMStorage() *gaugeRAMStorage {
 	return &gaugeRAMStorage{storage: map[string]metrics.Gauge{}}
 }
 
+func (cs *gaugeRAMStorage) get(id string) metrics.Gauge {
+	value, ok := cs.storage[id]
+	if !ok {
+		return nil
+	}
+	return value
+}
+
 func (cs *gaugeRAMStorage) Get(id string) metrics.Gauge {
 	cs.RLock()
 	defer cs.RUnlock()
-	if value, ok := cs.storage[id]; !ok {
-		return nil
-	} else {
-		return value
-	}
+	return cs.get(id)
 }
 
 func (cs *gaugeRAMStorage) GetAll() []metrics.Gauge {
@@ -76,9 +148,9 @@ func (cs *gaugeRAMStorage) GetAll() []metrics.Gauge {
 }
 
 func (cs *gaugeRAMStorage) Set(id string, value float64) {
-	gauge := cs.Get(id)
 	cs.Lock()
 	defer cs.Unlock()
+	gauge := cs.get(id)
 	if gauge == nil {
 		gauge = metrics.NewGauge(id)
 		cs.storage[id] = gauge

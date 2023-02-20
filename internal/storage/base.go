@@ -1,7 +1,14 @@
 package storage
 
 import (
+	"errors"
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
+)
+
+var (
+	ErrInvalidType  = errors.New("invalid type")
+	ErrInvalidValue = errors.New("invalid value")
+	ErrNotFound     = errors.New("not found")
 )
 
 type CounterStorager interface {
@@ -16,11 +23,8 @@ type GaugeStorager interface {
 	GetAll() []metrics.Gauge
 }
 
-type Repository struct {
-	Gauge   GaugeStorager
-	Counter CounterStorager
-}
-
-func NewRepository(gaugeRepo GaugeStorager, counterRepo CounterStorager) *Repository {
-	return &Repository{Gauge: gaugeRepo, Counter: counterRepo}
+type Repository interface {
+	SetMetric(typeM, id string, value string) error
+	GetMetric(typeM, id string) (metrics.Metric, error)
+	GetAll() []metrics.Metric
 }

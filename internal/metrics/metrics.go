@@ -5,8 +5,8 @@ import (
 )
 
 const (
-	GaugeTypeName   = "gauge"
-	CounterTypeName = "counter"
+	GaugeType   = "gauge"
+	CounterType = "counter"
 )
 
 type Metric interface {
@@ -37,7 +37,7 @@ func (g *gauge) GetValue() string {
 }
 
 func (g *gauge) GetType() string {
-	return GaugeTypeName
+	return GaugeType
 }
 
 func (g *gauge) Set(value float64) {
@@ -80,7 +80,7 @@ func (c *counter) GetValue() string {
 }
 
 func (c *counter) GetType() string {
-	return CounterTypeName
+	return CounterType
 }
 
 func NewCounter(name string) *counter {
