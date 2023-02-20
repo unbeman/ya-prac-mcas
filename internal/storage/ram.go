@@ -123,37 +123,37 @@ func NewGaugeRAMStorage() *gaugeRAMStorage {
 	return &gaugeRAMStorage{storage: map[string]metrics.Gauge{}}
 }
 
-func (cs *gaugeRAMStorage) get(id string) metrics.Gauge {
-	value, ok := cs.storage[id]
+func (gs *gaugeRAMStorage) get(id string) metrics.Gauge {
+	value, ok := gs.storage[id]
 	if !ok {
 		return nil
 	}
 	return value
 }
 
-func (cs *gaugeRAMStorage) Get(id string) metrics.Gauge {
-	cs.RLock()
-	defer cs.RUnlock()
-	return cs.get(id)
+func (gs *gaugeRAMStorage) Get(id string) metrics.Gauge {
+	gs.RLock()
+	defer gs.RUnlock()
+	return gs.get(id)
 }
 
-func (cs *gaugeRAMStorage) GetAll() []metrics.Gauge {
-	cs.RLock()
-	defer cs.RUnlock()
-	mSlice := make([]metrics.Gauge, 0, len(cs.storage))
-	for _, gauge := range cs.storage {
+func (gs *gaugeRAMStorage) GetAll() []metrics.Gauge {
+	gs.RLock()
+	defer gs.RUnlock()
+	mSlice := make([]metrics.Gauge, 0, len(gs.storage))
+	for _, gauge := range gs.storage {
 		mSlice = append(mSlice, gauge)
 	}
 	return mSlice
 }
 
-func (cs *gaugeRAMStorage) Set(id string, value float64) {
-	cs.Lock()
-	defer cs.Unlock()
-	gauge := cs.get(id)
+func (gs *gaugeRAMStorage) Set(id string, value float64) {
+	gs.Lock()
+	defer gs.Unlock()
+	gauge := gs.get(id)
 	if gauge == nil {
 		gauge = metrics.NewGauge(id)
-		cs.storage[id] = gauge
+		gs.storage[id] = gauge
 	}
 	gauge.Set(value)
 }
