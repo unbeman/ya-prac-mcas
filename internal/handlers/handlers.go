@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -10,6 +11,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"github.com/unbeman/ya-prac-mcas/internal/metrics"
+	"github.com/unbeman/ya-prac-mcas/internal/parser"
 	"github.com/unbeman/ya-prac-mcas/internal/storage"
 )
 
@@ -37,46 +40,42 @@ func NewCollectorHandler(repository storage.Repository) *CollectorHandler {
 		router.Get("/", ch.GetMetricsHandler())
 		router.Route("/update", func(r chi.Router) {
 			r.Post("/{type}/{name}/{value}", ch.UpdateMetricHandler())
+			r.Post("/", ch.UpdateJsonMetricHandler())
 		})
 		router.Route("/value", func(r chi.Router) {
 			r.Get("/{type}/{name}", ch.GetMetricHandler())
+			r.Post("/", ch.GetJsonMetricHandler())
 		})
 	})
 	return ch
 }
 
-func getParams(request *http.Request, keys ...string) (map[string]string, error) {
-	params := make(map[string]string)
-	for _, key := range keys {
-		value := chi.URLParam(request, key)
-		if len(value) == 0 {
-			return nil, fmt.Errorf("empty %v", key)
-		}
-		params[key] = value
-	}
-	return params, nil
-}
-
 func (ch *CollectorHandler) GetMetricHandler() http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "text/plain")
-		params, err := getParams(request, ParamType, ParamName)
+		params, err := parser.ParseURI(request, ParamType, ParamName)
+		if errors.Is(err, parser.ErrInvalidType) {
+			http.Error(writer, err.Error(), http.StatusNotImplemented)
+			return
+		}
+		if errors.Is(err, parser.ErrInvalidValue) {
+			http.Error(writer, err.Error(), http.StatusBadRequest)
+			return
+		}
 		if err != nil {
 			http.Error(writer, err.Error(), http.StatusMethodNotAllowed)
 			return
 		}
 
-		metric, err := ch.Repository.GetMetric(params[ParamType], params[ParamName])
-		if errors.Is(err, storage.ErrNotFound) {
-			http.Error(writer, err.Error(), http.StatusNotFound)
-			return
+		var metric metrics.Metric
+		switch params.Type {
+		case metrics.GaugeType:
+			metric = ch.Repository.GetGauge(params.Name)
+		case metrics.CounterType:
+			metric = ch.Repository.GetCounter(params.Name)
 		}
-		if errors.Is(err, storage.ErrInvalidType) {
-			http.Error(writer, err.Error(), http.StatusNotImplemented)
-			return
-		}
-		if errors.Is(err, storage.ErrInvalidValue) {
-			http.Error(writer, err.Error(), http.StatusBadRequest)
+		if metric == nil {
+			http.Error(writer, "metric not found", http.StatusNotFound)
 			return
 		}
 
@@ -112,20 +111,97 @@ func (ch *CollectorHandler) GetMetricsHandler() http.HandlerFunc {
 func (ch *CollectorHandler) UpdateMetricHandler() http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "text/plain")
-		params, err := getParams(request, ParamType, ParamName, ParamValue)
-		if err != nil {
-			http.Error(writer, err.Error(), http.StatusMethodNotAllowed)
-			return
-		}
-		err = ch.Repository.SetMetric(params[ParamType], params[ParamName], params[ParamValue])
-		if errors.Is(err, storage.ErrInvalidType) {
+		params, err := parser.ParseURI(request, ParamType, ParamName, ParamValue)
+		if errors.Is(err, parser.ErrInvalidType) {
 			http.Error(writer, err.Error(), http.StatusNotImplemented)
 			return
 		}
-		if errors.Is(err, storage.ErrInvalidValue) {
+		if errors.Is(err, parser.ErrInvalidValue) {
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
+		switch params.Type {
+		case metrics.GaugeType:
+			_ = ch.Repository.SetGauge(params.Name, *params.ValueGauge)
+		case metrics.CounterType:
+			_ = ch.Repository.AddCounter(params.Name, *params.ValueCounter)
+		}
+		writer.WriteHeader(http.StatusOK)
+	}
+}
+
+func (ch *CollectorHandler) GetJsonMetricHandler() http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+
+		var jsonMetric *parser.JSONMetric
+		if err := json.NewDecoder(request.Body).Decode(&jsonMetric); err != nil {
+			http.Error(writer, err.Error(), http.StatusBadRequest)
+			return
+		}
+		params, err := parser.ParseJSON(jsonMetric, false)
+		if errors.Is(err, parser.ErrInvalidType) {
+			http.Error(writer, err.Error(), http.StatusNotImplemented)
+			return
+		}
+		if errors.Is(err, parser.ErrInvalidValue) {
+			http.Error(writer, err.Error(), http.StatusBadRequest)
+			return
+		}
+		var metric metrics.Metric
+		switch params.Type {
+		case metrics.GaugeType:
+			metric = ch.Repository.GetGauge(params.Name)
+		case metrics.CounterType:
+			metric = ch.Repository.GetCounter(params.Name)
+		}
+
+		if metric == nil {
+			http.Error(writer, "metric not found", http.StatusNotFound)
+			return
+		}
+
+		jsonMetric = parser.MetricToJSON(metric)
+		if err := json.NewEncoder(writer).Encode(jsonMetric); err != nil {
+			log.Printf("Write failed, %v", err)
+			return
+		}
+		writer.WriteHeader(http.StatusOK)
+	}
+}
+
+func (ch *CollectorHandler) UpdateJsonMetricHandler() http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+		var jsonMetric *parser.JSONMetric
+		if err := json.NewDecoder(request.Body).Decode(&jsonMetric); err != nil {
+			http.Error(writer, err.Error(), http.StatusBadRequest)
+			return
+		}
+		params, err := parser.ParseJSON(jsonMetric, true)
+		if errors.Is(err, parser.ErrInvalidType) {
+			http.Error(writer, err.Error(), http.StatusNotImplemented)
+			return
+		}
+		if errors.Is(err, parser.ErrInvalidValue) {
+			http.Error(writer, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		var metric metrics.Metric
+		switch params.Type {
+		case metrics.GaugeType:
+			metric = ch.Repository.SetGauge(params.Name, *params.ValueGauge)
+		case metrics.CounterType:
+			metric = ch.Repository.AddCounter(params.Name, *params.ValueCounter)
+		}
+		log.Printf("JSON UPD %#v", metric)
+		jsonMetric = parser.MetricToJSON(metric)
+		if err := json.NewEncoder(writer).Encode(&jsonMetric); err != nil {
+			log.Printf("Write failed, %v\n", err)
+			return
+		}
+		log.Printf("UpdateJsonMetricHandler Output: %v\n", jsonMetric)
 		writer.WriteHeader(http.StatusOK)
 	}
 }

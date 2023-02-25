@@ -14,8 +14,8 @@ import (
 const (
 	reportAddr     = "127.0.0.1:8080"
 	clientTimeout  = 5 * time.Second
-	pollInterval   = 1 * time.Second
-	reportInterval = 2 * time.Second
+	pollInterval   = 2 * time.Second
+	reportInterval = 10 * time.Second
 	reportTimeout  = 2 * time.Second
 )
 
