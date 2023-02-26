@@ -34,11 +34,11 @@ func NewCollectorHandler(repository storage.Repository) *CollectorHandler {
 		router.Get("/", ch.GetMetricsHandler())
 		router.Route("/update", func(r chi.Router) {
 			r.Post("/{type}/{name}/{value}", ch.UpdateMetricHandler())
-			r.Post("/", ch.UpdateJsonMetricHandler())
+			r.Post("/", ch.UpdateJSONMetricHandler())
 		})
 		router.Route("/value", func(r chi.Router) {
 			r.Get("/{type}/{name}", ch.GetMetricHandler())
-			r.Post("/", ch.GetJsonMetricHandler())
+			r.Post("/", ch.GetJSONMetricHandler())
 		})
 	})
 	return ch
@@ -115,7 +115,7 @@ func (ch *CollectorHandler) UpdateMetricHandler() http.HandlerFunc {
 	}
 }
 
-func (ch *CollectorHandler) GetJsonMetricHandler() http.HandlerFunc {
+func (ch *CollectorHandler) GetJSONMetricHandler() http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
 
@@ -150,7 +150,7 @@ func (ch *CollectorHandler) GetJsonMetricHandler() http.HandlerFunc {
 	}
 }
 
-func (ch *CollectorHandler) UpdateJsonMetricHandler() http.HandlerFunc {
+func (ch *CollectorHandler) UpdateJSONMetricHandler() http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
 		var jsonMetric *parser.JSONMetric
