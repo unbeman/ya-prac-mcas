@@ -16,12 +16,6 @@ import (
 	"github.com/unbeman/ya-prac-mcas/internal/storage"
 )
 
-const (
-	ParamType  = "type"
-	ParamName  = "name"
-	ParamValue = "value"
-)
-
 type CollectorHandler struct {
 	*chi.Mux
 	Repository storage.Repository
@@ -53,7 +47,7 @@ func NewCollectorHandler(repository storage.Repository) *CollectorHandler {
 func (ch *CollectorHandler) GetMetricHandler() http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "text/plain")
-		params, err := parser.ParseURI(request, ParamType, ParamName)
+		params, err := parser.ParseURI(request, parser.PType, parser.PName)
 		if errors.Is(err, parser.ErrInvalidType) {
 			http.Error(writer, err.Error(), http.StatusNotImplemented)
 			return
@@ -67,13 +61,7 @@ func (ch *CollectorHandler) GetMetricHandler() http.HandlerFunc {
 			return
 		}
 
-		var metric metrics.Metric
-		switch params.Type {
-		case metrics.GaugeType:
-			metric = ch.Repository.GetGauge(params.Name)
-		case metrics.CounterType:
-			metric = ch.Repository.GetCounter(params.Name)
-		}
+		metric := ch.getMetric(params)
 		if metric == nil {
 			http.Error(writer, "metric not found", http.StatusNotFound)
 			return
@@ -111,7 +99,7 @@ func (ch *CollectorHandler) GetMetricsHandler() http.HandlerFunc {
 func (ch *CollectorHandler) UpdateMetricHandler() http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "text/plain")
-		params, err := parser.ParseURI(request, ParamType, ParamName, ParamValue)
+		params, err := parser.ParseURI(request, parser.PType, parser.PName, parser.PValue)
 		if errors.Is(err, parser.ErrInvalidType) {
 			http.Error(writer, err.Error(), http.StatusNotImplemented)
 			return
@@ -120,12 +108,9 @@ func (ch *CollectorHandler) UpdateMetricHandler() http.HandlerFunc {
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
-		switch params.Type {
-		case metrics.GaugeType:
-			_ = ch.Repository.SetGauge(params.Name, *params.ValueGauge)
-		case metrics.CounterType:
-			_ = ch.Repository.AddCounter(params.Name, *params.ValueCounter)
-		}
+
+		_ = ch.updateMetric(params)
+
 		writer.WriteHeader(http.StatusOK)
 	}
 }
@@ -139,7 +124,7 @@ func (ch *CollectorHandler) GetJsonMetricHandler() http.HandlerFunc {
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
-		params, err := parser.ParseJSON(jsonMetric, false)
+		params, err := parser.ParseJSON(jsonMetric, parser.PType, parser.PName)
 		if errors.Is(err, parser.ErrInvalidType) {
 			http.Error(writer, err.Error(), http.StatusNotImplemented)
 			return
@@ -148,13 +133,8 @@ func (ch *CollectorHandler) GetJsonMetricHandler() http.HandlerFunc {
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
-		var metric metrics.Metric
-		switch params.Type {
-		case metrics.GaugeType:
-			metric = ch.Repository.GetGauge(params.Name)
-		case metrics.CounterType:
-			metric = ch.Repository.GetCounter(params.Name)
-		}
+
+		metric := ch.getMetric(params)
 
 		if metric == nil {
 			http.Error(writer, "metric not found", http.StatusNotFound)
@@ -178,7 +158,7 @@ func (ch *CollectorHandler) UpdateJsonMetricHandler() http.HandlerFunc {
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
-		params, err := parser.ParseJSON(jsonMetric, true)
+		params, err := parser.ParseJSON(jsonMetric, parser.PType, parser.PName, parser.PValue)
 		if errors.Is(err, parser.ErrInvalidType) {
 			http.Error(writer, err.Error(), http.StatusNotImplemented)
 			return
@@ -188,14 +168,8 @@ func (ch *CollectorHandler) UpdateJsonMetricHandler() http.HandlerFunc {
 			return
 		}
 
-		var metric metrics.Metric
-		switch params.Type {
-		case metrics.GaugeType:
-			metric = ch.Repository.SetGauge(params.Name, *params.ValueGauge)
-		case metrics.CounterType:
-			metric = ch.Repository.AddCounter(params.Name, *params.ValueCounter)
-		}
-		log.Printf("JSON UPD %#v", metric)
+		metric := ch.updateMetric(params)
+
 		jsonMetric = parser.MetricToJSON(metric)
 		if err := json.NewEncoder(writer).Encode(&jsonMetric); err != nil {
 			log.Printf("Write failed, %v\n", err)
@@ -204,4 +178,28 @@ func (ch *CollectorHandler) UpdateJsonMetricHandler() http.HandlerFunc {
 		log.Printf("UpdateJsonMetricHandler Output: %v\n", jsonMetric)
 		writer.WriteHeader(http.StatusOK)
 	}
+}
+
+func (ch *CollectorHandler) getMetric(params *parser.MetricParams) metrics.Metric { //TODO: controller layer
+	var metric metrics.Metric
+	switch params.Type {
+	case metrics.GaugeType:
+		metric = ch.Repository.GetGauge(params.Name)
+	case metrics.CounterType:
+		metric = ch.Repository.GetCounter(params.Name)
+	}
+	return metric
+}
+
+func (ch *CollectorHandler) updateMetric(params *parser.MetricParams) metrics.Metric { //TODO: controller layer
+	log.Println("params values", params.ValueCounter, params.ValueGauge)
+	var metric metrics.Metric
+	switch params.Type {
+	case metrics.GaugeType:
+		metric = ch.Repository.SetGauge(params.Name, *params.ValueGauge)
+	case metrics.CounterType:
+		metric = ch.Repository.AddCounter(params.Name, *params.ValueCounter)
+	}
+	log.Printf("JSON UPD %#v", metric)
+	return metric
 }

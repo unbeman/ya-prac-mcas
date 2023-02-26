@@ -26,26 +26,36 @@ func MetricToJSON(m metrics.Metric) *JSONMetric {
 	return jM
 }
 
-func ParseJSON(jm *JSONMetric, needValue bool) (*MetricParams, error) {
-	if err := checkName(jm.ID); err != nil {
-		return nil, fmt.Errorf("ParseJSON: ID is %w", err)
-	}
-	err := checkType(jm.MType)
-	if err != nil {
-		return nil, err
-	}
-	var mP *MetricParams
-	switch jm.MType {
-	case metrics.CounterType:
-		if needValue && jm.Delta == nil {
-			return nil, fmt.Errorf("ParseJSON: Delta is %w", ErrInvalidValue)
+func ParseJSON(jm *JSONMetric, requiredKeys ...string) (*MetricParams, error) {
+	//TODO: гарантированной получать type и name, без type value не получать
+	params := &MetricParams{}
+	for _, key := range requiredKeys {
+		switch key {
+		case PType:
+			err := checkType(jm.MType)
+			if err != nil {
+				return nil, err
+			}
+			params.Type = jm.MType
+		case PName:
+			if err := checkName(jm.ID); err != nil {
+				return nil, fmt.Errorf("ParseJSON: ID is %w", err)
+			}
+			params.Name = jm.ID
+		case PValue:
+			switch jm.MType {
+			case metrics.CounterType:
+				if jm.Delta == nil {
+					return nil, fmt.Errorf("ParseJSON: Delta is %w", ErrInvalidValue)
+				}
+				params.ValueCounter = jm.Delta
+			case metrics.GaugeType:
+				if jm.Value == nil {
+					return nil, fmt.Errorf("ParseJSON: Value is %w", ErrInvalidValue)
+				}
+				params.ValueGauge = jm.Value
+			}
 		}
-		mP = &MetricParams{Name: jm.ID, Type: metrics.CounterType, ValueCounter: jm.Delta}
-	case metrics.GaugeType:
-		if needValue && jm.Value == nil {
-			return nil, fmt.Errorf("ParseJSON: Value is %w", ErrInvalidValue)
-		}
-		mP = &MetricParams{Name: jm.ID, Type: metrics.GaugeType, ValueGauge: jm.Value}
 	}
-	return mP, nil
+	return params, nil
 }
