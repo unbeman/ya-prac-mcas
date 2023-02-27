@@ -1,6 +1,7 @@
 package configs
 
 import (
+	"flag"
 	"log"
 	"time"
 
@@ -27,6 +28,17 @@ func (cfg *AgentConfig) FromEnv() *AgentConfig {
 	if err := env.Parse(cfg); err != nil {
 		log.Fatalln("AgentConfig.FromEnv: can't parse env vars, reason: ", err)
 	}
+	return cfg
+}
+
+func (cfg *AgentConfig) FromFlags() *AgentConfig {
+	address := flag.String("a", "127.0.0.1:8080", "metrics collection server address")
+	pollInterval := flag.Duration("p", 2*time.Second, "poll interval")
+	reportInterval := flag.Duration("r", 10*time.Second, "report interval")
+	flag.Parse()
+	cfg.Address = *address
+	cfg.PollInterval = *pollInterval
+	cfg.ReportInterval = *reportInterval
 	return cfg
 }
 

@@ -21,7 +21,7 @@ type fileHandler struct { // или не хэндлер
 	repo     storage.Repository
 }
 
-func NewFileHandler(cfg configs.FileStorageConfig, repo storage.Repository) (*fileHandler, error) {
+func NewFileHandler(cfg configs.FileHandlerConfig, repo storage.Repository) (*fileHandler, error) {
 	if len(cfg.File) == 0 {
 		return nil, fmt.Errorf("NewFileHandler: no file")
 	}

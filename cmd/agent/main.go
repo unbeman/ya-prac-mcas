@@ -20,7 +20,7 @@ func main() {
 		log.Println("Agent cancelled")
 	}()
 
-	cfg := configs.NewAgentConfig().FromEnv()
+	cfg := configs.NewAgentConfig().FromFlags().FromEnv()
 
 	client := http.Client{Timeout: cfg.Connection.ClientTimeout}
 
