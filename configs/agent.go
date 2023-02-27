@@ -11,7 +11,7 @@ type HttConnectionConfig struct {
 	ClientTimeout time.Duration
 }
 
-func NewHttConnectionConfig() *HttConnectionConfig {
+func newHttConnectionConfig() *HttConnectionConfig {
 	return &HttConnectionConfig{ClientTimeout: 5 * time.Second}
 }
 
@@ -36,7 +36,7 @@ func NewAgentConfig() *AgentConfig {
 		PollInterval:   2 * time.Second,
 		ReportInterval: 10 * time.Second,
 		ReportTimeout:  2 * time.Second,
-		Connection:     NewHttConnectionConfig(),
+		Connection:     newHttConnectionConfig(),
 	}
 	return cfg
 }
