@@ -2,11 +2,11 @@ package parser
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 )
 
@@ -35,14 +35,12 @@ func ParseURI(request *http.Request, requiredKeys ...string) (*MetricParams, err
 			case metrics.GaugeType:
 				gValue, err := strconv.ParseFloat(value, 64)
 				if err != nil {
-					log.Printf("ParseURI: %v \n", err)
 					return nil, fmt.Errorf("ParseURI: %v = %v - %w", key, value, ErrInvalidValue)
 				}
 				params.ValueGauge = &gValue
 			case metrics.CounterType:
 				cValue, err := strconv.ParseInt(value, 10, 64)
 				if err != nil {
-					log.Printf("ParseURI: %v \n", err)
 					return nil, fmt.Errorf("ParseURI: %v = %v - %w", key, value, ErrInvalidValue)
 				}
 				params.ValueCounter = &cValue

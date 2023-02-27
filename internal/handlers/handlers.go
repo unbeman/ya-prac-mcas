@@ -175,7 +175,6 @@ func (ch *CollectorHandler) UpdateJSONMetricHandler() http.HandlerFunc {
 			log.Printf("Write failed, %v\n", err)
 			return
 		}
-		log.Printf("UpdateJsonMetricHandler Output: %v\n", jsonMetric)
 		writer.WriteHeader(http.StatusOK)
 	}
 }
@@ -192,7 +191,6 @@ func (ch *CollectorHandler) getMetric(params *parser.MetricParams) metrics.Metri
 }
 
 func (ch *CollectorHandler) updateMetric(params *parser.MetricParams) metrics.Metric { //TODO: controller layer
-	log.Println("params values", params.ValueCounter, params.ValueGauge)
 	var metric metrics.Metric
 	switch params.Type {
 	case metrics.GaugeType:
@@ -200,6 +198,5 @@ func (ch *CollectorHandler) updateMetric(params *parser.MetricParams) metrics.Me
 	case metrics.CounterType:
 		metric = ch.Repository.AddCounter(params.Name, *params.ValueCounter)
 	}
-	log.Printf("JSON UPD %#v", metric)
 	return metric
 }

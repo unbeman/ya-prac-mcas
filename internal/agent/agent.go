@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/unbeman/ya-prac-mcas/configs"
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 	"github.com/unbeman/ya-prac-mcas/internal/parser"
 )
@@ -28,13 +29,13 @@ type agentMetrics struct {
 	reportTimeout  time.Duration
 }
 
-func NewAgentMetrics(addr string, clientTimeout, reportTimeout, pollInterval, reportInterval time.Duration) *agentMetrics {
-	return &agentMetrics{address: addr,
-		client:         http.Client{Timeout: clientTimeout},
+func NewAgentMetrics(cfg *configs.AgentConfig, client *http.Client) *agentMetrics {
+	return &agentMetrics{address: cfg.Address,
+		client:         *client,
 		collection:     NewMetricsCollection(),
-		pollInterval:   pollInterval,
-		reportInterval: reportInterval,
-		reportTimeout:  reportTimeout,
+		pollInterval:   cfg.PollInterval,
+		reportInterval: cfg.ReportInterval,
+		reportTimeout:  cfg.ReportTimeout,
 	}
 }
 
