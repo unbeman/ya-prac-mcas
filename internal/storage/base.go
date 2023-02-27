@@ -4,6 +4,11 @@ import (
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 )
 
+type Storager interface {
+	Load()
+	Save()
+}
+
 type Repository interface {
 	AddCounter(name string, delta int64) metrics.Counter
 	GetCounter(name string) metrics.Counter
