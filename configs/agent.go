@@ -17,8 +17,8 @@ func newHttConnectionConfig() *HttConnectionConfig {
 
 type AgentConfig struct {
 	Address        string        `env:"ADDRESS"`
-	PollInterval   time.Duration `env:"POLLINTERVAL"`
-	ReportInterval time.Duration `env:"REPORTINTERVAL"`
+	PollInterval   time.Duration `env:"POLL_INTERVAL"`
+	ReportInterval time.Duration `env:"REPORT_INTERVAL"`
 	ReportTimeout  time.Duration
 	Connection     *HttConnectionConfig
 }
