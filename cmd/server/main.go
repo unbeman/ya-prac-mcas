@@ -21,6 +21,7 @@ func main() { //TODO: more logs, pass context to Repository methods and handlers
 		log.Println("Server cancelled")
 	}()
 	cfg := configs.NewServerConfig().FromFlags().FromEnv()
+	log.Printf("SERVER CONFIG %#v\n", cfg)
 	ramRepo := storage.NewRAMRepository()
 
 	fileHandler, err := handlers.NewFileHandler(cfg.FileHandler, ramRepo)
@@ -37,7 +38,7 @@ func main() { //TODO: more logs, pass context to Repository methods and handlers
 		if cfg.FileHandler.Restore {
 			err := fileHandler.Load()
 			if err != nil {
-				log.Fatalln("Can't restore RAMRepository, reason:", err)
+				log.Println("Can't restore RAMRepository, skipped, reason:", err)
 			}
 		}
 
