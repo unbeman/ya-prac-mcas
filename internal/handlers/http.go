@@ -30,6 +30,8 @@ func NewCollectorHandler(repository storage.Repository) *CollectorHandler {
 	ch.Use(middleware.RealIP)
 	ch.Use(middleware.Logger)
 	ch.Use(middleware.Recoverer)
+	ch.Use(GZIPDecompress)
+	ch.Use(GZIPCompress)
 	ch.Route("/", func(router chi.Router) {
 		router.Get("/", ch.GetMetricsHandler())
 		router.Route("/update", func(r chi.Router) {
