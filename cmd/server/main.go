@@ -14,7 +14,7 @@ import (
 )
 
 // TODO: wrap to init server
-func main() { //TODO: more logs, add context to Repository and handlers
+func main() { //TODO: more logs, pass context to Repository methods and handlers
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, os.Interrupt)
 	defer func() {
 		cancel()
@@ -30,14 +30,14 @@ func main() { //TODO: more logs, add context to Repository and handlers
 	if fileHandler != nil {
 		defer func() {
 			if err := fileHandler.Save(); err != nil {
-				log.Fatalln(err)
+				log.Println("Can't save metrics, reason:", err)
 			}
 		}()
 
 		if cfg.FileHandler.Restore {
 			err := fileHandler.Load()
 			if err != nil {
-				log.Println("Can't restore RAMRepository, skipped, reason:", err)
+				log.Fatalln("Can't restore RAMRepository, reason:", err)
 			}
 		}
 
