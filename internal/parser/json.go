@@ -14,7 +14,7 @@ type JSONMetric struct {
 }
 
 func (jm *JSONMetric) String() string {
-	var delta, value string = "nil", "nil"
+	var delta, value = "nil", "nil"
 	if jm.Delta != nil {
 		delta = fmt.Sprintf("%v", *jm.Delta)
 	}
