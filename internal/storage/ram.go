@@ -1,22 +1,26 @@
 package storage
 
 import (
+	"context"
 	"sync"
 
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 )
 
-type RAMRepository struct {
+type ramRepository struct {
 	sync.RWMutex
 	counterStorage map[string]metrics.Counter
 	gaugeStorage   map[string]metrics.Gauge
 }
 
-func NewRAMRepository() *RAMRepository {
-	return &RAMRepository{counterStorage: map[string]metrics.Counter{}, gaugeStorage: map[string]metrics.Gauge{}}
+func NewRAMRepository() *ramRepository {
+	return &ramRepository{
+		counterStorage: map[string]metrics.Counter{},
+		gaugeStorage:   map[string]metrics.Gauge{},
+	}
 }
 
-func (rs *RAMRepository) getCounter(name string) metrics.Counter {
+func (rs *ramRepository) getCounter(name string) metrics.Counter {
 	value, ok := rs.counterStorage[name]
 	if !ok {
 		return nil
@@ -24,13 +28,13 @@ func (rs *RAMRepository) getCounter(name string) metrics.Counter {
 	return value
 }
 
-func (rs *RAMRepository) GetCounter(name string) metrics.Counter {
+func (rs *ramRepository) GetCounter(name string) metrics.Counter {
 	rs.RLock()
 	defer rs.RUnlock()
 	return rs.getCounter(name)
 }
 
-func (rs *RAMRepository) AddCounter(name string, value int64) metrics.Counter {
+func (rs *ramRepository) AddCounter(name string, value int64) metrics.Counter {
 	rs.Lock()
 	defer rs.Unlock()
 	counter := rs.getCounter(name)
@@ -42,7 +46,7 @@ func (rs *RAMRepository) AddCounter(name string, value int64) metrics.Counter {
 	return counter
 }
 
-func (rs *RAMRepository) getGauge(name string) metrics.Gauge {
+func (rs *ramRepository) getGauge(name string) metrics.Gauge {
 	value, ok := rs.gaugeStorage[name]
 	if !ok {
 		return nil
@@ -50,13 +54,13 @@ func (rs *RAMRepository) getGauge(name string) metrics.Gauge {
 	return value
 }
 
-func (rs *RAMRepository) GetGauge(name string) metrics.Gauge {
+func (rs *ramRepository) GetGauge(name string) metrics.Gauge {
 	rs.RLock()
 	defer rs.RUnlock()
 	return rs.getGauge(name)
 }
 
-func (rs *RAMRepository) SetGauge(name string, value float64) metrics.Gauge {
+func (rs *ramRepository) SetGauge(name string, value float64) metrics.Gauge {
 	rs.Lock()
 	defer rs.Unlock()
 	gauge := rs.getGauge(name)
@@ -68,7 +72,7 @@ func (rs *RAMRepository) SetGauge(name string, value float64) metrics.Gauge {
 	return gauge
 }
 
-func (rs *RAMRepository) GetAll() []metrics.Metric {
+func (rs *ramRepository) GetAll() []metrics.Metric {
 	rs.RLock()
 	defer rs.RUnlock()
 	metricSlice := make([]metrics.Metric, 0, len(rs.counterStorage)+len(rs.gaugeStorage))
@@ -80,4 +84,15 @@ func (rs *RAMRepository) GetAll() []metrics.Metric {
 		metricSlice = append(metricSlice, gauge)
 	}
 	return metricSlice
+}
+
+func (rs *ramRepository) Load() error {
+	return nil
+}
+
+func (rs *ramRepository) Save() error {
+	return nil
+}
+
+func (rs *ramRepository) RunSaver(ctx context.Context) {
 }

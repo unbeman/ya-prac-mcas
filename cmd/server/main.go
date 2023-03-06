@@ -2,54 +2,41 @@ package main
 
 import (
 	"context"
-	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
+	log "github.com/sirupsen/logrus"
+	"github.com/unbeman/ya-prac-mcas/internal/logging"
+
 	"github.com/unbeman/ya-prac-mcas/configs"
-	"github.com/unbeman/ya-prac-mcas/internal/handlers"
-	"github.com/unbeman/ya-prac-mcas/internal/storage"
+	"github.com/unbeman/ya-prac-mcas/internal/server"
 )
+
+func initContext() (context.Context, context.CancelFunc) {
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, os.Interrupt)
+	return ctx, cancel
+}
+
+func initConfig() configs.ServerConfig {
+	return *configs.NewServerConfig(configs.FromFlags(), configs.FromEnv())
+}
 
 // TODO: wrap to init server
 func main() { //TODO: more logs, pass context to Repository methods and handlers
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, os.Interrupt)
+	ctx, cancel := initContext()
 	defer func() {
 		cancel()
 		log.Println("Server cancelled")
 	}()
-	cfg := configs.NewServerConfig().FromFlags().FromEnv()
-	log.Printf("SERVER CONFIG %#v\n", cfg)
-	ramRepo := storage.NewRAMRepository()
 
-	fileHandler, err := handlers.NewFileHandler(cfg.FileHandler, ramRepo)
-	if err != nil {
-		log.Println("Can't init file storage, skipped, reason:", err)
-	}
-	if fileHandler != nil {
-		defer func() {
-			if err := fileHandler.Save(); err != nil {
-				log.Println("Can't save metrics, reason:", err)
-			}
-		}()
+	cfg := initConfig()
 
-		if cfg.FileHandler.Restore {
-			err := fileHandler.Load()
-			if err != nil {
-				log.Println("Can't restore RAMRepository, skipped, reason:", err)
-			}
-		}
+	logging.InitLogger(cfg.Logger)
 
-		go fileHandler.RunSaver(ctx)
-	}
+	log.Debugf("SERVER CONFIG %+v\n", cfg)
 
-	collectorHandler := handlers.NewCollectorHandler(ramRepo)
+	collectorServer := server.NewServerCollector(cfg)
 
-	go func(ctx context.Context) {
-		log.Fatal(http.ListenAndServe(cfg.Address, collectorHandler))
-	}(ctx)
-	log.Println("Server started, addr:", cfg.Address)
-	<-ctx.Done()
+	collectorServer.Run(ctx)
 }

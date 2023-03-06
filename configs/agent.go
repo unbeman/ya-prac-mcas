@@ -8,12 +8,22 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
+const (
+	ServerAddressDefault  = "127.0.0.1:8080"
+	PollIntervalDefault   = 2 * time.Second
+	ReportIntervalDefault = 10 * time.Second
+	ReportTimeoutDefault  = 2 * time.Second
+	ClientTimeoutDefault  = 5 * time.Second
+)
+
+type AgentOption func(config *AgentConfig)
+
 type HttConnectionConfig struct {
 	ClientTimeout time.Duration
 }
 
-func newHttConnectionConfig() *HttConnectionConfig {
-	return &HttConnectionConfig{ClientTimeout: 5 * time.Second}
+func newHttConnectionConfig() HttConnectionConfig {
+	return HttConnectionConfig{ClientTimeout: ClientTimeoutDefault}
 }
 
 type AgentConfig struct {
@@ -21,7 +31,8 @@ type AgentConfig struct {
 	PollInterval   time.Duration `env:"POLL_INTERVAL"`
 	ReportInterval time.Duration `env:"REPORT_INTERVAL"`
 	ReportTimeout  time.Duration
-	Connection     *HttConnectionConfig
+	Connection     HttConnectionConfig
+	Logger         LoggerConfig
 }
 
 func (cfg *AgentConfig) FromEnv() *AgentConfig {
@@ -32,23 +43,26 @@ func (cfg *AgentConfig) FromEnv() *AgentConfig {
 }
 
 func (cfg *AgentConfig) FromFlags() *AgentConfig {
-	address := flag.String("a", "127.0.0.1:8080", "metrics collection server address")
-	pollInterval := flag.Duration("p", 2*time.Second, "poll interval")
-	reportInterval := flag.Duration("r", 10*time.Second, "report interval")
+	address := flag.String("a", ServerAddressDefault, "metrics collection server address")
+	pollInterval := flag.Duration("p", PollIntervalDefault, "poll interval")
+	reportInterval := flag.Duration("r", ReportIntervalDefault, "report interval")
+	logLevel := flag.String("l", LogLevelDefault, "log level, allowed [info, debug]")
 	flag.Parse()
 	cfg.Address = *address
 	cfg.PollInterval = *pollInterval
 	cfg.ReportInterval = *reportInterval
+	cfg.Logger.Level = *logLevel
 	return cfg
 }
 
 func NewAgentConfig() *AgentConfig {
 	cfg := &AgentConfig{
-		Address:        "127.0.0.1:8080",
-		PollInterval:   2 * time.Second,
-		ReportInterval: 10 * time.Second,
-		ReportTimeout:  2 * time.Second,
+		Address:        ServerAddressDefault,
+		PollInterval:   PollIntervalDefault,
+		ReportInterval: ReportIntervalDefault,
+		ReportTimeout:  ReportTimeoutDefault,
 		Connection:     newHttConnectionConfig(),
+		Logger:         newLoggerConfig(),
 	}
 	return cfg
 }

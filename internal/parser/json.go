@@ -13,6 +13,17 @@ type JSONMetric struct {
 	Value *float64 `json:"value,omitempty"`
 }
 
+func (jm *JSONMetric) String() string {
+	var delta, value string = "nil", "nil"
+	if jm.Delta != nil {
+		delta = fmt.Sprintf("%v", *jm.Delta)
+	}
+	if jm.Value != nil {
+		value = fmt.Sprintf("%v", *jm.Value)
+	}
+	return fmt.Sprintf("{ID:%v; MType:%v; Delta:%v; Value:%v};", jm.ID, jm.MType, delta, value)
+}
+
 func MetricToJSON(m metrics.Metric) *JSONMetric {
 	jM := &JSONMetric{ID: m.GetName(), MType: m.GetType()}
 	switch m.GetType() {

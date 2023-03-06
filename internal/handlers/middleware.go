@@ -26,45 +26,28 @@ func (wr gzipWriter) Write(b []byte) (int, error) {
 	return wr.Writer.Write(b)
 }
 
-func GZIPCompress(next http.Handler) http.Handler {
-	gh := func(writer http.ResponseWriter, request *http.Request) {
-		if !isSupportsGZIP(request.Header.Values("Accept-Encoding")) {
-			next.ServeHTTP(writer, request)
-			return
+func GZIP(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if isSupportsGZIP(request.Header.Values("Content-Encoding")) {
+			gzReader, err := gzip.NewReader(request.Body)
+			if err != nil {
+				http.Error(writer, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			defer gzReader.Close()
+			request.Body = gzReader
 		}
+		if isSupportsGZIP(request.Header.Values("Accept-Encoding")) {
+			gzWriter, err := gzip.NewWriterLevel(writer, gzip.BestSpeed)
+			if err != nil {
+				http.Error(writer, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			defer gzWriter.Close()
 
-		gzWriter, err := gzip.NewWriterLevel(writer, gzip.BestSpeed)
-		if err != nil {
-			http.Error(writer, err.Error(), http.StatusInternalServerError)
-			return
+			writer = gzipWriter{ResponseWriter: writer, Writer: gzWriter}
+			writer.Header().Set("Content-Encoding", GZIPType)
 		}
-		defer gzWriter.Close()
-
-		writer.Header().Set("Content-Encoding", GZIPType)
-		next.ServeHTTP(gzipWriter{ResponseWriter: writer, Writer: gzWriter}, request)
-
-	}
-	return http.HandlerFunc(gh)
-}
-
-func GZIPDecompress(next http.Handler) http.Handler {
-	gh := func(writer http.ResponseWriter, request *http.Request) {
-		if !isSupportsGZIP(request.Header.Values("Content-Encoding")) {
-			next.ServeHTTP(writer, request)
-			return
-		}
-
-		gzReader, err := gzip.NewReader(request.Body)
-		if err != nil {
-			http.Error(writer, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		defer gzReader.Close()
-
-		request.Body = gzReader //ReadCloser = Reader
-
-		writer.Header().Set("Content-Encoding", GZIPType)
 		next.ServeHTTP(writer, request)
-	}
-	return http.HandlerFunc(gh)
+	})
 }

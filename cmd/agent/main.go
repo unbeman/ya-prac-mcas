@@ -2,14 +2,15 @@ package main
 
 import (
 	"context"
-	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/unbeman/ya-prac-mcas/configs"
 	"github.com/unbeman/ya-prac-mcas/internal/agent"
+	"github.com/unbeman/ya-prac-mcas/internal/logging"
 )
 
 // TODO: wrap to init agent
@@ -22,9 +23,11 @@ func main() {
 
 	cfg := configs.NewAgentConfig().FromFlags().FromEnv()
 
-	client := http.Client{Timeout: cfg.Connection.ClientTimeout}
+	logging.InitLogger(cfg.Logger)
 
-	cm := agent.NewAgentMetrics(cfg, &client)
+	log.Infof("AGENT CONFIG %+v\n", cfg)
+
+	cm := agent.NewAgentMetrics(cfg)
 	cm.DoWork(ctx)
 	<-ctx.Done()
 }

@@ -4,13 +4,6 @@ import (
 	"fmt"
 )
 
-//type TypeMetric int
-//
-//const (
-//	GaugeType   TypeMetric = iota
-//	CounterType TypeMetric = iota
-//)
-
 const (
 	GaugeType   = "gauge"
 	CounterType = "counter"

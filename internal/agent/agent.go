@@ -6,10 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/unbeman/ya-prac-mcas/configs"
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
@@ -29,9 +30,9 @@ type agentMetrics struct {
 	reportTimeout  time.Duration
 }
 
-func NewAgentMetrics(cfg *configs.AgentConfig, client *http.Client) *agentMetrics {
+func NewAgentMetrics(cfg *configs.AgentConfig) *agentMetrics {
 	return &agentMetrics{address: cfg.Address,
-		client:         *client,
+		client:         http.Client{Timeout: cfg.Connection.ClientTimeout},
 		collection:     NewMetricsCollection(),
 		pollInterval:   cfg.PollInterval,
 		reportInterval: cfg.ReportInterval,
@@ -54,13 +55,13 @@ func (am *agentMetrics) Report(ctx context.Context, ms map[string]metrics.Metric
 }
 
 func (am *agentMetrics) DoWork(ctx context.Context) {
-	log.Println("Agent started")
+	log.Infoln("Agent started")
 	reportTicker := time.NewTicker(am.reportInterval)
 	pollTicker := time.NewTicker(am.pollInterval)
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Worker stopped by context")
+			log.Infoln("Worker stopped by context")
 			return
 		case <-reportTicker.C:
 			am.Report(ctx, am.collection.GetMetrics())
@@ -80,7 +81,7 @@ func (am agentMetrics) SendMetric(ctx context.Context, m metrics.Metric) { //TOD
 	request.Header.Set("Content-Type", "text/plain")
 	response, err := am.client.Do(request)
 	if err != nil {
-		log.Println(err)
+		log.Errorln(err)
 		return
 	}
 	defer response.Body.Close()
@@ -88,7 +89,7 @@ func (am agentMetrics) SendMetric(ctx context.Context, m metrics.Metric) { //TOD
 	if err != nil {
 		fmt.Println(err)
 	}
-	log.Printf("Received status code: %v for post request to %v", response.StatusCode, url)
+	log.Debugf("Received status code: %v for post request to %v\n", response.StatusCode, url)
 }
 
 func (am agentMetrics) SendJSONMetric(ctx context.Context, m metrics.Metric) { //TODO: write http connector
@@ -106,15 +107,15 @@ func (am agentMetrics) SendJSONMetric(ctx context.Context, m metrics.Metric) { /
 	request.Header.Set("Content-Type", "text/plain")
 	response, err := am.client.Do(request)
 	if err != nil {
-		log.Println(err)
+		log.Errorln(err)
 		return
 	}
 	defer response.Body.Close()
 	_, err = io.Copy(io.Discard, response.Body)
 	if err != nil {
-		fmt.Println(err)
+		log.Errorln(err)
 	}
-	log.Printf("Received status code: %v for post request to %v", response.StatusCode, url)
+	log.Debugf("Received status code: %v for post request to %v\n", response.StatusCode, url)
 }
 
 func FormatURL(addr string, m metrics.Metric) string {

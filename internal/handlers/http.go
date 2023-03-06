@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
+	logger "github.com/chi-middleware/logrus-logger"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 	"github.com/unbeman/ya-prac-mcas/internal/parser"
@@ -28,10 +29,10 @@ func NewCollectorHandler(repository storage.Repository) *CollectorHandler {
 	}
 	ch.Use(middleware.RequestID)
 	ch.Use(middleware.RealIP)
-	ch.Use(middleware.Logger)
+	//ch.Use(middleware.Logger)
+	ch.Use(logger.Logger("router", log.New()))
 	ch.Use(middleware.Recoverer)
-	ch.Use(GZIPDecompress)
-	ch.Use(GZIPCompress)
+	ch.Use(GZIP)
 	ch.Route("/", func(router chi.Router) {
 		router.Get("/", ch.GetMetricsHandler())
 		router.Route("/update", func(r chi.Router) {
@@ -71,7 +72,7 @@ func (ch *CollectorHandler) GetMetricHandler() http.HandlerFunc {
 
 		_, err = writer.Write([]byte(metric.GetValue()))
 		if err != nil {
-			log.Printf("Write failed, %v", err)
+			log.Errorf("Write failed, %v", err)
 			return
 		}
 		writer.WriteHeader(http.StatusOK)
@@ -85,13 +86,13 @@ func (ch *CollectorHandler) GetMetricsHandler() http.HandlerFunc {
 		for _, metric := range ch.Repository.GetAll() {
 			_, err := fmt.Fprintf(&b, "%v: %v\n", metric.GetName(), metric.GetValue())
 			if err != nil {
-				log.Printf("GetMetricsHandler: can't build metrics list with values %v %v, reason: %v",
+				log.Errorf("GetMetricsHandler: can't build metrics list with values %v %v, reason: %v",
 					metric.GetName(), metric.GetValue(), err)
 			}
 		}
 		_, err := writer.Write([]byte(b.String()))
 		if err != nil {
-			log.Printf("Write failed, %v", err)
+			log.Errorf("Write failed, %v", err)
 			return
 		}
 		writer.WriteHeader(http.StatusOK)
@@ -135,7 +136,6 @@ func (ch *CollectorHandler) GetJSONMetricHandler() http.HandlerFunc {
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
-
 		metric := ch.getMetric(params)
 
 		if metric == nil {
@@ -145,7 +145,7 @@ func (ch *CollectorHandler) GetJSONMetricHandler() http.HandlerFunc {
 
 		jsonMetric = parser.MetricToJSON(metric)
 		if err := json.NewEncoder(writer).Encode(jsonMetric); err != nil {
-			log.Printf("Write failed, %v", err)
+			log.Errorf("Write failed, %v", err)
 			return
 		}
 		writer.WriteHeader(http.StatusOK)
@@ -169,12 +169,11 @@ func (ch *CollectorHandler) UpdateJSONMetricHandler() http.HandlerFunc {
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
-
 		metric := ch.updateMetric(params)
 
 		jsonMetric = parser.MetricToJSON(metric)
 		if err := json.NewEncoder(writer).Encode(&jsonMetric); err != nil {
-			log.Printf("Write failed, %v\n", err)
+			log.Errorf("Write failed, %v\n", err)
 			return
 		}
 		writer.WriteHeader(http.StatusOK)
