@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -74,8 +75,9 @@ func (fh *fileRepository) Load() error {
 	reader := json.NewDecoder(file)
 	var jsonMetricsL []*parser.JSONMetric
 	err = reader.Decode(&jsonMetricsL)
-	if err == io.EOF {
-		log.Infoln("No more json metrics to load")
+	if errors.Is(err, io.EOF) {
+		log.Infoln("No json metrics to load")
+		return nil
 	}
 	if err != nil { //TODO
 		return fmt.Errorf("fileRepository.Load(): can't decode json %w", err)
