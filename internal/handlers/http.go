@@ -32,7 +32,7 @@ func NewCollectorHandler(repository storage.Repository) *CollectorHandler {
 	//ch.Use(middleware.Logger)
 	ch.Use(logger.Logger("router", log.New()))
 	ch.Use(middleware.Recoverer)
-	ch.Use(GZIP)
+	ch.Use(GZipMiddleware)
 	ch.Route("/", func(router chi.Router) {
 		router.Get("/", ch.GetMetricsHandler())
 		router.Route("/update", func(r chi.Router) {
