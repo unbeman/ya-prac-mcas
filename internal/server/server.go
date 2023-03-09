@@ -23,7 +23,7 @@ func (s serverCollector) Run(ctx context.Context) {
 	if s.fileStorage != nil {
 		if s.restore {
 			if err := s.fileStorage.Restore(); err != nil {
-				log.Println("Can't restore metrics, reason: %v\n", err)
+				log.Printf("Can't restore metrics, reason: %v\n", err)
 			}
 		}
 
