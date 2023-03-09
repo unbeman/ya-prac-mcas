@@ -1,6 +1,6 @@
 package configs
 
-var LogLevelDefault = "Info"
+var LogLevelDefault = "info"
 
 type LoggerConfig struct {
 	Level string `env:"LOG_LEVEL"`

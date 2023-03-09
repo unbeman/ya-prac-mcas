@@ -18,32 +18,27 @@ const (
 
 type ServerOption func(config *ServerConfig)
 
-type RepositoryConfig struct {
-	FileStorage *FileStorageConfig
-}
-
 type FileStorageConfig struct {
 	Interval time.Duration `env:"STORE_INTERVAL"`
 	File     string        `env:"STORE_FILE"`
-	Restore  bool          `env:"RESTORE"`
 }
 
 func (cfg *FileStorageConfig) String() string {
-	return fmt.Sprintf("[Interval: %v; File: %v; Restore: %v]", cfg.Interval, cfg.File, cfg.Restore)
+	return fmt.Sprintf("[Interval: %v; File: %v;]", cfg.Interval, cfg.File)
 }
 
 func newFileStorageConfig() *FileStorageConfig {
 	return &FileStorageConfig{
 		Interval: StoreIntervalDefault,
 		File:     StoreFileDefault,
-		Restore:  RestoreDefault,
 	}
 }
 
 type ServerConfig struct {
-	Address    string `env:"ADDRESS"`
-	Repository RepositoryConfig
-	Logger     LoggerConfig
+	Address     string `env:"ADDRESS"`
+	Restore     bool   `env:"RESTORE"`
+	FileStorage *FileStorageConfig
+	Logger      LoggerConfig
 }
 
 func FromEnv() ServerOption {
@@ -63,25 +58,22 @@ func FromFlags() ServerOption {
 		logLevel := flag.String("l", LogLevelDefault, "log level, allowed [info, debug]")
 		flag.Parse()
 		cfg.Address = *address
-		cfg.Repository.FileStorage.Restore = *restore
-		cfg.Repository.FileStorage.Interval = *storeInterval
-		cfg.Repository.FileStorage.File = *storeFile
+		cfg.Restore = *restore
+		cfg.FileStorage.Interval = *storeInterval
+		cfg.FileStorage.File = *storeFile
 		cfg.Logger.Level = *logLevel
 	}
 }
 
 func NewServerConfig(options ...ServerOption) *ServerConfig {
 	cfg := &ServerConfig{
-		Address:    AddressDefault,
-		Repository: RepositoryConfig{FileStorage: newFileStorageConfig()},
-		Logger:     newLoggerConfig(),
+		Address:     AddressDefault,
+		Restore:     RestoreDefault,
+		FileStorage: newFileStorageConfig(),
+		Logger:      newLoggerConfig(),
 	}
 	for _, option := range options {
 		option(cfg)
-	}
-
-	if len(cfg.Repository.FileStorage.File) == 0 {
-		cfg.Repository.FileStorage = nil
 	}
 	return cfg
 }

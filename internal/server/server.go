@@ -12,36 +12,51 @@ import (
 )
 
 type serverCollector struct {
-	address    string
-	handler    http.Handler
-	repository storage.Repository
+	address     string
+	handler     http.Handler
+	repository  storage.Repository
+	fileStorage *storage.FileStorage
+	restore     bool
 }
 
 func (s serverCollector) Run(ctx context.Context) {
-	err := s.repository.Load()
-	if err != nil {
-		log.Fatalln("Can't load metrics")
-	}
-	go s.repository.RunSaver(ctx)
-
-	defer func() {
-		err := s.repository.Save()
-		if err != nil {
-			log.Fatalln("Can't save metrics, reason:", err)
+	if s.fileStorage != nil {
+		if s.restore {
+			if err := s.fileStorage.Restore(); err != nil {
+				log.Println("Can't restore metrics, reason: %v\n", err)
+			}
 		}
-	}()
+
+		go s.fileStorage.RunBackuper(ctx)
+	}
+
 	go func(ctx context.Context) {
 		log.Fatalln(http.ListenAndServe(s.address, s.handler))
 	}(ctx)
 	log.Infoln("Server started, addr:", s.address)
-	<-ctx.Done()
 }
+
+func (s serverCollector) Shutdown() {
+	if s.fileStorage == nil {
+		return
+	}
+	err := s.fileStorage.Backup()
+	if err != nil {
+		log.Fatalln("Can't backup metrics, reason:", err)
+	}
+}
+
 func NewServerCollector(cfg configs.ServerConfig) *serverCollector {
-	repository := storage.GetRepository(cfg.Repository)
-	collectorHandler := handlers.NewCollectorHandler(repository)
+	repository := storage.GetRepository()
+	fileStorage, err := storage.NewFileStorage(cfg.FileStorage, repository)
+	if err != nil {
+		log.Warnf("FileStorage disabled, %v", err)
+	}
 	return &serverCollector{
-		address:    cfg.Address,
-		handler:    collectorHandler,
-		repository: repository,
+		address:     cfg.Address,
+		handler:     handlers.NewCollectorHandler(repository),
+		repository:  repository,
+		restore:     cfg.Restore,
+		fileStorage: fileStorage,
 	}
 }

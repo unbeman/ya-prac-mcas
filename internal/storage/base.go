@@ -1,9 +1,6 @@
 package storage
 
 import (
-	"context"
-
-	"github.com/unbeman/ya-prac-mcas/configs"
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 )
 
@@ -15,16 +12,10 @@ type Repository interface {
 	GetGauge(name string) metrics.Gauge
 
 	GetAll() []metrics.Metric
-
-	Load() error
-	Save() error
-	RunSaver(ctx context.Context)
 }
 
-func GetRepository(cfg configs.RepositoryConfig) Repository {
+func GetRepository() Repository { //cfg configs.RepositoryConfig
 	switch {
-	case cfg.FileStorage != nil:
-		return NewFileRepository(*cfg.FileStorage)
 	default:
 		return NewRAMRepository()
 	}

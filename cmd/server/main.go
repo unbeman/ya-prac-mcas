@@ -37,6 +37,7 @@ func main() { //TODO: more logs, pass context to Repository methods and handlers
 	log.Debugf("SERVER CONFIG %+v\n", cfg)
 
 	collectorServer := server.NewServerCollector(cfg)
-
 	collectorServer.Run(ctx)
+	<-ctx.Done()
+	collectorServer.Shutdown()
 }

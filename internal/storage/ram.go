@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"context"
 	"sync"
 
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
@@ -84,15 +83,4 @@ func (rs *ramRepository) GetAll() []metrics.Metric {
 		metricSlice = append(metricSlice, gauge)
 	}
 	return metricSlice
-}
-
-func (rs *ramRepository) Load() error {
-	return nil
-}
-
-func (rs *ramRepository) Save() error {
-	return nil
-}
-
-func (rs *ramRepository) RunSaver(ctx context.Context) {
 }
