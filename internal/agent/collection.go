@@ -1,9 +1,10 @@
 package agent
 
 import (
-	"log"
 	"math/rand"
 	"runtime"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 )
@@ -41,7 +42,7 @@ type MetricsCollection struct {
 }
 
 func NewMetricsCollection() *MetricsCollection {
-	log.Println("Metrics CREATED")
+	log.Infoln("Metrics CREATED")
 	return &MetricsCollection{
 		Alloc:         metrics.NewGauge("Alloc"),
 		BuckHashSys:   metrics.NewGauge("BuckHashSys"),
@@ -107,7 +108,7 @@ func UpdateMetrics(am *MetricsCollection) {
 
 	am.PollCount.Inc()
 	am.RandomValue.Set(rand.Float64())
-	log.Println("Metrics updated")
+	log.Infoln("Metrics updated")
 }
 
 func (am *MetricsCollection) GetMetrics() map[string]metrics.Metric {

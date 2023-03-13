@@ -1,15 +1,20 @@
 package agent
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
+	"github.com/unbeman/ya-prac-mcas/configs"
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
+	"github.com/unbeman/ya-prac-mcas/internal/parser"
 )
 
 type Sender interface {
@@ -25,13 +30,13 @@ type agentMetrics struct {
 	reportTimeout  time.Duration
 }
 
-func NewAgentMetrics(addr string, clientTimeout, reportTimeout, pollInterval, reportInterval time.Duration) *agentMetrics {
-	return &agentMetrics{address: addr,
-		client:         http.Client{Timeout: clientTimeout},
+func NewAgentMetrics(cfg *configs.AgentConfig) *agentMetrics {
+	return &agentMetrics{address: cfg.Address,
+		client:         http.Client{Timeout: cfg.Connection.ClientTimeout},
 		collection:     NewMetricsCollection(),
-		pollInterval:   pollInterval,
-		reportInterval: reportInterval,
-		reportTimeout:  reportTimeout,
+		pollInterval:   cfg.PollInterval,
+		reportInterval: cfg.ReportInterval,
+		reportTimeout:  cfg.ReportTimeout,
 	}
 }
 
@@ -42,7 +47,7 @@ func (am *agentMetrics) Report(ctx context.Context, ms map[string]metrics.Metric
 	for _, metric := range ms {
 		wg.Add(1)
 		go func(m metrics.Metric) {
-			am.SendMetric(ctx2, m)
+			am.SendJSONMetric(ctx2, m)
 			wg.Done()
 		}(metric)
 	}
@@ -50,13 +55,13 @@ func (am *agentMetrics) Report(ctx context.Context, ms map[string]metrics.Metric
 }
 
 func (am *agentMetrics) DoWork(ctx context.Context) {
-	log.Println("Agent started")
+	log.Infoln("Agent started")
 	reportTicker := time.NewTicker(am.reportInterval)
 	pollTicker := time.NewTicker(am.pollInterval)
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Worker stopped by context")
+			log.Infoln("Worker stopped by context")
 			return
 		case <-reportTicker.C:
 			am.Report(ctx, am.collection.GetMetrics())
@@ -76,7 +81,7 @@ func (am agentMetrics) SendMetric(ctx context.Context, m metrics.Metric) { //TOD
 	request.Header.Set("Content-Type", "text/plain")
 	response, err := am.client.Do(request)
 	if err != nil {
-		log.Println(err)
+		log.Errorln(err)
 		return
 	}
 	defer response.Body.Close()
@@ -84,5 +89,35 @@ func (am agentMetrics) SendMetric(ctx context.Context, m metrics.Metric) { //TOD
 	if err != nil {
 		fmt.Println(err)
 	}
-	log.Printf("Received status code: %v for post request to %v", response.StatusCode, url)
+	log.Debugf("Received status code: %v for post request to %v\n", response.StatusCode, url)
+}
+
+func (am agentMetrics) SendJSONMetric(ctx context.Context, m metrics.Metric) { //TODO: write http connector
+	url := fmt.Sprintf("http://%s/update", am.address) //TODO: wrap
+	jsonMetric := parser.MetricToJSON(m)
+	buf, err := json.Marshal(jsonMetric)
+	if err != nil {
+		log.Fatalf("Json marshal failed, %v\n", err)
+		return
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(buf))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	request.Header.Set("Content-Type", "text/plain")
+	response, err := am.client.Do(request)
+	if err != nil {
+		log.Errorln(err)
+		return
+	}
+	defer response.Body.Close()
+	_, err = io.Copy(io.Discard, response.Body)
+	if err != nil {
+		log.Errorln(err)
+	}
+	log.Debugf("Received status code: %v for post request to %v\n", response.StatusCode, url)
+}
+
+func FormatURL(addr string, m metrics.Metric) string {
+	return fmt.Sprintf("http://%v/update/%v/%v/%v", addr, m.GetType(), m.GetName(), m.GetValue())
 }
