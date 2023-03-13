@@ -66,7 +66,7 @@ func (fh *FileStorage) Backup() error {
 }
 
 func (fh *FileStorage) Restore() error {
-	file, err := os.OpenFile(fh.filename, os.O_RDONLY|os.O_CREATE, 0777)
+	file, err := os.OpenFile(fh.filename, os.O_RDONLY|os.O_CREATE, 0664)
 	if err != nil {
 		return fmt.Errorf("FileStorage.Restore(): can't open file %v - %w", fh.filename, err)
 	}
