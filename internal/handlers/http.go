@@ -122,11 +122,12 @@ func (ch *CollectorHandler) GetJSONMetricHandler() http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
 
-		var jsonMetric *parser.JSONMetric
-		if err := json.NewDecoder(request.Body).Decode(&jsonMetric); err != nil {
+		jsonMetric := new(parser.JSONMetric)
+		if err := jsonMetric.Decode(request.Body); err != nil {
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
+
 		params, err := parser.ParseJSON(jsonMetric, parser.PType, parser.PName)
 		if errors.Is(err, parser.ErrInvalidType) {
 			http.Error(writer, err.Error(), http.StatusNotImplemented)
@@ -155,11 +156,13 @@ func (ch *CollectorHandler) GetJSONMetricHandler() http.HandlerFunc {
 func (ch *CollectorHandler) UpdateJSONMetricHandler() http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
-		var jsonMetric *parser.JSONMetric
-		if err := json.NewDecoder(request.Body).Decode(&jsonMetric); err != nil {
+
+		jsonMetric := new(parser.JSONMetric)
+		if err := jsonMetric.Decode(request.Body); err != nil {
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
+
 		params, err := parser.ParseJSON(jsonMetric, parser.PType, parser.PName, parser.PValue)
 		if errors.Is(err, parser.ErrInvalidType) {
 			http.Error(writer, err.Error(), http.StatusNotImplemented)

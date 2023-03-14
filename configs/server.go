@@ -10,35 +10,36 @@ import (
 )
 
 const (
-	AddressDefault       = "127.0.0.1:8080"
-	StoreIntervalDefault = 300 * time.Second
-	StoreFileDefault     = "/tmp/devops-metrics-db.json"
-	RestoreDefault       = true
+	AddressDefault        = "127.0.0.1:8080"
+	BackupIntervalDefault = 300 * time.Second
+	BackupFileDefault     = "/tmp/devops-metrics-db.json"
+	RestoreDefault        = true
 )
 
 type ServerOption func(config *ServerConfig)
 
-type FileStorageConfig struct {
+type BackupConfig struct {
 	Interval time.Duration `env:"STORE_INTERVAL"`
+	Restore  bool          `env:"RESTORE"`
 	File     string        `env:"STORE_FILE"`
 }
 
-func (cfg *FileStorageConfig) String() string {
-	return fmt.Sprintf("[Interval: %v; File: %v;]", cfg.Interval, cfg.File)
+func (cfg *BackupConfig) String() string {
+	return fmt.Sprintf("[Interval: %v; File: %v; Restore: %v;]", cfg.Interval, cfg.File, cfg.Restore)
 }
 
-func newFileStorageConfig() *FileStorageConfig {
-	return &FileStorageConfig{
-		Interval: StoreIntervalDefault,
-		File:     StoreFileDefault,
+func newBackupConfig() *BackupConfig {
+	return &BackupConfig{
+		Interval: BackupIntervalDefault,
+		File:     BackupFileDefault,
+		Restore:  RestoreDefault,
 	}
 }
 
 type ServerConfig struct {
-	Address     string `env:"ADDRESS"`
-	Restore     bool   `env:"RESTORE"`
-	FileStorage *FileStorageConfig
-	Logger      LoggerConfig
+	Address string `env:"ADDRESS"`
+	Logger  LoggerConfig
+	Backup  *BackupConfig
 }
 
 func FromEnv() ServerOption {
@@ -53,24 +54,23 @@ func FromFlags() ServerOption {
 	return func(cfg *ServerConfig) {
 		address := flag.String("a", AddressDefault, "server address")
 		restore := flag.Bool("r", RestoreDefault, "restore metrics to file")
-		storeInterval := flag.Duration("i", StoreIntervalDefault, "store interval")
-		storeFile := flag.String("f", StoreFileDefault, "json file path to store metrics")
+		storeInterval := flag.Duration("i", BackupIntervalDefault, "store interval")
+		storeFile := flag.String("f", BackupFileDefault, "json file path to store metrics")
 		logLevel := flag.String("l", LogLevelDefault, "log level, allowed [info, debug]")
 		flag.Parse()
 		cfg.Address = *address
-		cfg.Restore = *restore
-		cfg.FileStorage.Interval = *storeInterval
-		cfg.FileStorage.File = *storeFile
+		cfg.Backup.Restore = *restore
+		cfg.Backup.Interval = *storeInterval
+		cfg.Backup.File = *storeFile
 		cfg.Logger.Level = *logLevel
 	}
 }
 
 func NewServerConfig(options ...ServerOption) *ServerConfig {
 	cfg := &ServerConfig{
-		Address:     AddressDefault,
-		Restore:     RestoreDefault,
-		FileStorage: newFileStorageConfig(),
-		Logger:      newLoggerConfig(),
+		Address: AddressDefault,
+		Backup:  newBackupConfig(),
+		Logger:  newLoggerConfig(),
 	}
 	for _, option := range options {
 		option(cfg)

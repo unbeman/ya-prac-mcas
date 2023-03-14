@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,31 +12,31 @@ import (
 	"github.com/unbeman/ya-prac-mcas/internal/server"
 )
 
-func initContext() (context.Context, context.CancelFunc) {
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, os.Interrupt)
-	return ctx, cancel
-}
-
-func initConfig() configs.ServerConfig {
-	return *configs.NewServerConfig(configs.FromFlags(), configs.FromEnv())
-}
-
-// TODO: wrap to init server
-func main() { //TODO: more logs, pass context to Repository methods and handlers
-	ctx, cancel := initContext()
-	defer func() {
-		cancel()
-		log.Println("Server cancelled")
-	}()
-
-	cfg := initConfig()
+func main() {
+	cfg := *configs.NewServerConfig(configs.FromFlags(), configs.FromEnv())
 
 	logging.InitLogger(cfg.Logger)
 
 	log.Debugf("SERVER CONFIG %+v\n", cfg)
 
 	collectorServer := server.NewServerCollector(cfg)
-	collectorServer.Run(ctx)
-	<-ctx.Done()
-	collectorServer.Shutdown()
+
+	go func() {
+		exit := make(chan os.Signal, 1)
+		signal.Notify(
+			exit,
+			os.Interrupt,
+			syscall.SIGTERM,
+			syscall.SIGINT,
+			syscall.SIGQUIT,
+		)
+
+		for {
+			sig := <-exit
+			log.Infof("Got signal '%v'", sig)
+			collectorServer.Shutdown()
+		}
+	}()
+
+	collectorServer.Run()
 }

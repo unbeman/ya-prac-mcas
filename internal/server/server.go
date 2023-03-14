@@ -3,8 +3,10 @@ package server
 import (
 	"context"
 	"net/http"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/unbeman/ya-prac-mcas/internal/backup"
 
 	"github.com/unbeman/ya-prac-mcas/configs"
 	"github.com/unbeman/ya-prac-mcas/internal/handlers"
@@ -12,51 +14,61 @@ import (
 )
 
 type serverCollector struct {
-	address     string
-	handler     http.Handler
-	repository  storage.Repository
-	fileStorage *storage.FileStorage
-	restore     bool
+	repository storage.Repository
+	httpServer http.Server
+	backuper   backup.Backuper
 }
 
-func (s serverCollector) Run(ctx context.Context) {
-	if s.fileStorage != nil {
-		if s.restore {
-			if err := s.fileStorage.Restore(); err != nil {
-				log.Printf("Can't restore metrics, reason: %v\n", err)
-			}
-		}
+func (s *serverCollector) Run() {
+	wg := sync.WaitGroup{}
+	wg.Add(2)
 
-		go s.fileStorage.RunBackuper(ctx)
+	// run http server
+	go func() {
+		defer wg.Done()
+		err := s.httpServer.ListenAndServe()
+		log.Infoln("serverCollector.Run()", err)
+	}()
+
+	// run backup ticker
+	go func() {
+		defer wg.Done()
+		s.backuper.Run()
+	}()
+
+	log.Infoln("Server collector started, addr:", s.httpServer.Addr)
+
+	wg.Wait()
+
+	// shutdown
+	if err := s.backuper.Backup(); err != nil {
+		log.Errorf("Failed to backup repository: %v", err)
 	}
 
-	go func(ctx context.Context) {
-		log.Fatalln(http.ListenAndServe(s.address, s.handler))
-	}(ctx)
-	log.Infoln("Server started, addr:", s.address)
+	log.Infoln("Server collector stopped, addr:", s.httpServer.Addr)
 }
 
-func (s serverCollector) Shutdown() {
-	if s.fileStorage == nil {
-		return
-	}
-	err := s.fileStorage.Backup()
+func (s *serverCollector) Shutdown() {
+
+	log.Infoln("Shutting down")
+	err := s.httpServer.Shutdown(context.TODO())
 	if err != nil {
-		log.Fatalln("Can't backup metrics, reason:", err)
+		log.Errorln(err)
 	}
+	s.backuper.Shutdown()
 }
 
 func NewServerCollector(cfg configs.ServerConfig) *serverCollector {
 	repository := storage.GetRepository()
-	fileStorage, err := storage.NewFileStorage(cfg.FileStorage, repository)
+
+	backuper, err := backup.NewRepositoryBackup(cfg.Backup, repository)
 	if err != nil {
-		log.Warnf("FileStorage disabled, %v", err)
+		log.Fatalln("NewServerCollector:", err)
 	}
+
 	return &serverCollector{
-		address:     cfg.Address,
-		handler:     handlers.NewCollectorHandler(repository),
-		repository:  repository,
-		restore:     cfg.Restore,
-		fileStorage: fileStorage,
+		httpServer: http.Server{Addr: cfg.Address, Handler: handlers.NewCollectorHandler(repository)},
+		repository: repository,
+		backuper:   backuper,
 	}
 }

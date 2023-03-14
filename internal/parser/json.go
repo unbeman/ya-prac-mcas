@@ -1,7 +1,9 @@
 package parser
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 )
@@ -22,6 +24,13 @@ func (jm *JSONMetric) String() string {
 		value = fmt.Sprintf("%v", *jm.Value)
 	}
 	return fmt.Sprintf("{ID:%v; MType:%v; Delta:%v; Value:%v};", jm.ID, jm.MType, delta, value)
+}
+
+func (jm *JSONMetric) Decode(data io.Reader) error {
+	if err := json.NewDecoder(data).Decode(&jm); err != nil {
+		return err
+	}
+	return nil
 }
 
 func MetricToJSON(m metrics.Metric) *JSONMetric {
