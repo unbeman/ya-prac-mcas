@@ -109,10 +109,7 @@ func (rb *RepositoryBackup) Restore() error {
 }
 
 func (rb *RepositoryBackup) isTickerEnable() bool {
-	if rb.interval != 0*time.Second {
-		return true
-	}
-	return false
+	return rb.interval != 0*time.Second
 }
 
 func (rb *RepositoryBackup) Run() {
