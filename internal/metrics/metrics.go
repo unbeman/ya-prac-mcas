@@ -18,6 +18,7 @@ type Metric interface {
 type Gauge interface {
 	Metric
 	Set(value float64)
+	Value() float64
 }
 type gauge struct {
 	name  string
@@ -44,6 +45,10 @@ func (g *gauge) Set(value float64) {
 	g.value = value
 }
 
+func (g *gauge) Value() float64 {
+	return g.value
+}
+
 func NewGauge(name string) *gauge {
 	return &gauge{name: name}
 }
@@ -52,6 +57,7 @@ type Counter interface {
 	Metric
 	Inc()
 	Add(value int64)
+	Value() int64
 }
 
 type counter struct {
@@ -81,6 +87,10 @@ func (c *counter) GetValue() string {
 
 func (c *counter) GetType() string {
 	return CounterType
+}
+
+func (c *counter) Value() int64 {
+	return c.value
 }
 
 func NewCounter(name string) *counter {

@@ -1,20 +1,42 @@
 package main
 
 import (
-	"log"
-	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/unbeman/ya-prac-mcas/internal/handlers"
-	"github.com/unbeman/ya-prac-mcas/internal/storage"
+	log "github.com/sirupsen/logrus"
+	"github.com/unbeman/ya-prac-mcas/internal/logging"
+
+	"github.com/unbeman/ya-prac-mcas/configs"
+	"github.com/unbeman/ya-prac-mcas/internal/server"
 )
 
-const (
-	ServerAddress = "localhost:8080"
-)
+func main() {
+	cfg := *configs.NewServerConfig(configs.FromFlags(), configs.FromEnv())
 
-func main() { //TODO: more logs, add signals and context
-	ramRepo := storage.NewRAMRepository()
-	ch := handlers.NewCollectorHandler(ramRepo)
-	log.Println("Server started")
-	log.Fatal(http.ListenAndServe(ServerAddress, ch))
+	logging.InitLogger(cfg.Logger)
+
+	log.Debugf("SERVER CONFIG %+v\n", cfg)
+
+	collectorServer := server.NewServerCollector(cfg)
+
+	go func() {
+		exit := make(chan os.Signal, 1)
+		signal.Notify(
+			exit,
+			os.Interrupt,
+			syscall.SIGTERM,
+			syscall.SIGINT,
+			syscall.SIGQUIT,
+		)
+
+		for {
+			sig := <-exit
+			log.Infof("Got signal '%v'", sig)
+			collectorServer.Shutdown()
+		}
+	}()
+
+	collectorServer.Run()
 }
