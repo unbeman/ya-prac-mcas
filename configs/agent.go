@@ -9,7 +9,6 @@ import (
 )
 
 const (
-	ServerAddressDefault  = "127.0.0.1:8080"
 	PollIntervalDefault   = 2 * time.Second
 	ReportIntervalDefault = 10 * time.Second
 	ReportTimeoutDefault  = 2 * time.Second
@@ -28,6 +27,7 @@ func newHttConnectionConfig() HttConnectionConfig {
 
 type AgentConfig struct {
 	Address        string        `env:"ADDRESS"`
+	Key            string        `env:"KEY"`
 	PollInterval   time.Duration `env:"POLL_INTERVAL"`
 	ReportInterval time.Duration `env:"REPORT_INTERVAL"`
 	ReportTimeout  time.Duration
@@ -44,11 +44,13 @@ func (cfg *AgentConfig) FromEnv() *AgentConfig {
 
 func (cfg *AgentConfig) FromFlags() *AgentConfig {
 	address := flag.String("a", ServerAddressDefault, "metrics collection server address")
+	key := flag.String("k", KeyDefault, "key for calculating the metric hash")
 	pollInterval := flag.Duration("p", PollIntervalDefault, "poll interval")
 	reportInterval := flag.Duration("r", ReportIntervalDefault, "report interval")
 	logLevel := flag.String("l", LogLevelDefault, "log level, allowed [info, debug]")
 	flag.Parse()
 	cfg.Address = *address
+	cfg.Key = *key
 	cfg.PollInterval = *pollInterval
 	cfg.ReportInterval = *reportInterval
 	cfg.Logger.Level = *logLevel
@@ -58,6 +60,7 @@ func (cfg *AgentConfig) FromFlags() *AgentConfig {
 func NewAgentConfig() *AgentConfig {
 	cfg := &AgentConfig{
 		Address:        ServerAddressDefault,
+		Key:            KeyDefault,
 		PollInterval:   PollIntervalDefault,
 		ReportInterval: ReportIntervalDefault,
 		ReportTimeout:  ReportTimeoutDefault,

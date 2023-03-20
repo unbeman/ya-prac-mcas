@@ -66,8 +66,9 @@ func NewServerCollector(cfg configs.ServerConfig) *serverCollector {
 		log.Fatalln("NewServerCollector:", err)
 	}
 
+	handler := handlers.NewCollectorHandler(repository, cfg.Key)
 	return &serverCollector{
-		httpServer: http.Server{Addr: cfg.Address, Handler: handlers.NewCollectorHandler(repository)},
+		httpServer: http.Server{Addr: cfg.Address, Handler: handler},
 		repository: repository,
 		backuper:   backuper,
 	}

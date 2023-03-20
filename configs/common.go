@@ -1,5 +1,10 @@
 package configs
 
+const (
+	ServerAddressDefault = "127.0.0.1:8080"
+	KeyDefault           = ""
+)
+
 var LogLevelDefault = "info"
 
 type LoggerConfig struct {

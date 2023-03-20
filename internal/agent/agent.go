@@ -11,7 +11,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
 	"github.com/unbeman/ya-prac-mcas/configs"
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 	"github.com/unbeman/ya-prac-mcas/internal/parser"
@@ -25,6 +24,7 @@ type agentMetrics struct {
 	address        string
 	client         http.Client
 	collection     *MetricsCollection
+	hashKey        []byte
 	pollInterval   time.Duration
 	reportInterval time.Duration
 	reportTimeout  time.Duration
@@ -34,6 +34,7 @@ func NewAgentMetrics(cfg *configs.AgentConfig) *agentMetrics {
 	return &agentMetrics{address: cfg.Address,
 		client:         http.Client{Timeout: cfg.Connection.ClientTimeout},
 		collection:     NewMetricsCollection(),
+		hashKey:        []byte(cfg.Key),
 		pollInterval:   cfg.PollInterval,
 		reportInterval: cfg.ReportInterval,
 		reportTimeout:  cfg.ReportTimeout,
@@ -95,6 +96,7 @@ func (am agentMetrics) SendMetric(ctx context.Context, m metrics.Metric) { //TOD
 func (am agentMetrics) SendJSONMetric(ctx context.Context, m metrics.Metric) { //TODO: write http connector
 	url := fmt.Sprintf("http://%s/update", am.address) //TODO: wrap
 	jsonMetric := parser.MetricToJSON(m)
+	jsonMetric.Hash = am.getHash(m)
 	buf, err := json.Marshal(jsonMetric)
 	if err != nil {
 		log.Fatalf("Json marshal failed, %v\n", err)
@@ -116,6 +118,13 @@ func (am agentMetrics) SendJSONMetric(ctx context.Context, m metrics.Metric) { /
 		log.Errorln(err)
 	}
 	log.Debugf("Received status code: %v for post request to %v\n", response.StatusCode, url)
+}
+
+func (am agentMetrics) getHash(metric metrics.Metric) string {
+	if len(am.hashKey) == 0 {
+		return ""
+	}
+	return metric.Hash(am.hashKey)
 }
 
 func FormatURL(addr string, m metrics.Metric) string {

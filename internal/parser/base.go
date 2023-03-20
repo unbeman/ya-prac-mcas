@@ -17,6 +17,7 @@ type MetricParams struct { //TODO: make builder .TypeAndName() .Value()
 	Type         string
 	ValueCounter *int64
 	ValueGauge   *float64
+	Hash         string
 }
 
 func checkType(typeStr string) error {

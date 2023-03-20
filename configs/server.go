@@ -10,7 +10,6 @@ import (
 )
 
 const (
-	AddressDefault        = "127.0.0.1:8080"
 	BackupIntervalDefault = 300 * time.Second
 	BackupFileDefault     = "/tmp/devops-metrics-db.json"
 	RestoreDefault        = true
@@ -38,6 +37,7 @@ func newBackupConfig() *BackupConfig {
 
 type ServerConfig struct {
 	Address string `env:"ADDRESS"`
+	Key     string `env:"KEY"`
 	Logger  LoggerConfig
 	Backup  *BackupConfig
 }
@@ -52,13 +52,15 @@ func FromEnv() ServerOption {
 
 func FromFlags() ServerOption {
 	return func(cfg *ServerConfig) {
-		address := flag.String("a", AddressDefault, "server address")
+		address := flag.String("a", ServerAddressDefault, "server address")
+		key := flag.String("k", KeyDefault, "key for calculating the metric hash")
 		restore := flag.Bool("r", RestoreDefault, "restore metrics to file")
 		storeInterval := flag.Duration("i", BackupIntervalDefault, "store interval")
 		storeFile := flag.String("f", BackupFileDefault, "json file path to store metrics")
 		logLevel := flag.String("l", LogLevelDefault, "log level, allowed [info, debug]")
 		flag.Parse()
 		cfg.Address = *address
+		cfg.Key = *key
 		cfg.Backup.Restore = *restore
 		cfg.Backup.Interval = *storeInterval
 		cfg.Backup.File = *storeFile
@@ -68,7 +70,8 @@ func FromFlags() ServerOption {
 
 func NewServerConfig(options ...ServerOption) *ServerConfig {
 	cfg := &ServerConfig{
-		Address: AddressDefault,
+		Address: ServerAddressDefault,
+		Key:     KeyDefault,
 		Backup:  newBackupConfig(),
 		Logger:  newLoggerConfig(),
 	}

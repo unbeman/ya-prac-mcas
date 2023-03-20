@@ -13,6 +13,7 @@ type JSONMetric struct {
 	MType string   `json:"type"`
 	Delta *int64   `json:"delta,omitempty"`
 	Value *float64 `json:"value,omitempty"`
+	Hash  string   `json:"hash,omitempty"`
 }
 
 func (jm *JSONMetric) String() string {
@@ -77,5 +78,6 @@ func ParseJSON(jm *JSONMetric, requiredKeys ...string) (*MetricParams, error) {
 			}
 		}
 	}
+	params.Hash = jm.Hash
 	return params, nil
 }

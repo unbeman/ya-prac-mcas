@@ -1,6 +1,9 @@
 package metrics
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 )
 
@@ -13,6 +16,7 @@ type Metric interface {
 	GetName() string
 	GetValue() string
 	GetType() string
+	Hash(key []byte) string //должно ли ей этим заниматься
 }
 
 type Gauge interface {
@@ -39,6 +43,12 @@ func (g *gauge) GetValue() string {
 
 func (g *gauge) GetType() string {
 	return GaugeType
+}
+
+func (g *gauge) Hash(key []byte) string {
+	h := hmac.New(sha256.New, key)
+	h.Write([]byte(fmt.Sprintf("%s:gauge:%f", g.name, g.value)))
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 func (g *gauge) Set(value float64) {
@@ -87,6 +97,12 @@ func (c *counter) GetValue() string {
 
 func (c *counter) GetType() string {
 	return CounterType
+}
+
+func (c *counter) Hash(key []byte) string {
+	h := hmac.New(sha256.New, key)
+	h.Write([]byte(fmt.Sprintf("%s:counter:%d", c.name, c.value)))
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 func (c *counter) Value() int64 {

@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,12 +23,14 @@ import (
 type CollectorHandler struct {
 	*chi.Mux
 	Repository storage.Repository
+	HashKey    []byte
 }
 
-func NewCollectorHandler(repository storage.Repository) *CollectorHandler {
+func NewCollectorHandler(repository storage.Repository, key string) *CollectorHandler {
 	ch := &CollectorHandler{
 		Mux:        chi.NewMux(),
 		Repository: repository,
+		HashKey:    []byte(key),
 	}
 	ch.Use(middleware.RequestID)
 	ch.Use(middleware.RealIP)
@@ -145,6 +150,7 @@ func (ch *CollectorHandler) GetJSONMetricHandler() http.HandlerFunc {
 		}
 
 		jsonMetric = parser.MetricToJSON(metric)
+		jsonMetric.Hash = ch.getHash(metric)
 		if err := json.NewEncoder(writer).Encode(jsonMetric); err != nil {
 			log.Errorf("Write failed, %v", err)
 			return
@@ -172,9 +178,15 @@ func (ch *CollectorHandler) UpdateJSONMetricHandler() http.HandlerFunc {
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
+		if !ch.isValidHash(params) {
+			http.Error(writer, "invalid hash", http.StatusBadRequest)
+			return
+		}
+
 		metric := ch.updateMetric(params)
 
 		jsonMetric = parser.MetricToJSON(metric)
+		jsonMetric.Hash = ch.getHash(metric)
 		if err := json.NewEncoder(writer).Encode(&jsonMetric); err != nil {
 			log.Errorf("Write failed, %v\n", err)
 			return
@@ -203,4 +215,40 @@ func (ch *CollectorHandler) updateMetric(params *parser.MetricParams) metrics.Me
 		metric = ch.Repository.AddCounter(params.Name, *params.ValueCounter)
 	}
 	return metric
+}
+
+func (ch *CollectorHandler) isValidHash(params *parser.MetricParams) bool {
+	if !ch.isKeySet() { //ключа нет
+		return true
+	}
+	if !isHashSet(params) {
+		return false
+	}
+	var calculated string
+	switch params.Type {
+	case metrics.GaugeType:
+		h := hmac.New(sha256.New, ch.HashKey)
+		h.Write([]byte(fmt.Sprintf("%s:gauge:%f", params.Name, *params.ValueGauge)))
+		calculated = hex.EncodeToString(h.Sum(nil))
+	case metrics.CounterType:
+		h := hmac.New(sha256.New, ch.HashKey)
+		h.Write([]byte(fmt.Sprintf("%s:counter:%d", params.Name, *params.ValueCounter)))
+		calculated = hex.EncodeToString(h.Sum(nil))
+	}
+	return params.Hash == calculated
+}
+
+func (ch *CollectorHandler) getHash(metric metrics.Metric) string {
+	if !ch.isKeySet() {
+		return ""
+	}
+	return metric.Hash(ch.HashKey)
+}
+
+func (ch *CollectorHandler) isKeySet() bool {
+	return len(ch.HashKey) > 0
+}
+
+func isHashSet(params *parser.MetricParams) bool {
+	return len(params.Hash) > 0
 }
