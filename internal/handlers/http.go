@@ -48,6 +48,7 @@ func NewCollectorHandler(repository storage.Repository, key string) *CollectorHa
 			r.Get("/{type}/{name}", ch.GetMetricHandler())
 			r.Post("/", ch.GetJSONMetricHandler())
 		})
+		router.Get("/ping", ch.PingHandler())
 	})
 	return ch
 }
@@ -247,6 +248,19 @@ func (ch *CollectorHandler) getHash(metric metrics.Metric) string {
 
 func (ch *CollectorHandler) isKeySet() bool {
 	return len(ch.HashKey) > 0
+}
+
+func (ch *CollectorHandler) PingHandler() http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "text/plain")
+
+		err := ch.Repository.Ping()
+		if err != nil {
+			http.Error(writer, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		writer.WriteHeader(http.StatusOK)
+	}
 }
 
 func isHashSet(params *parser.MetricParams) bool {

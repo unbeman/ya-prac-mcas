@@ -12,6 +12,14 @@ type ramRepository struct {
 	gaugeStorage   map[string]metrics.Gauge
 }
 
+func (rs *ramRepository) Shutdown() error {
+	return nil
+}
+
+func (rs *ramRepository) Ping() error {
+	return nil
+}
+
 func NewRAMRepository() *ramRepository {
 	return &ramRepository{
 		counterStorage: map[string]metrics.Counter{},

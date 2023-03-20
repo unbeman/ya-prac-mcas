@@ -13,9 +13,28 @@ const (
 	BackupIntervalDefault = 300 * time.Second
 	BackupFileDefault     = "/tmp/devops-metrics-db.json"
 	RestoreDefault        = true
+	DSNDefault            = ""
+	PGSchemaFileDefault   = "./pg-schema.sql"
 )
 
 type ServerOption func(config *ServerConfig)
+
+type PostgresConfig struct {
+	DSN        string `env:"DATABASE_DSN"`
+	SchemaFile string
+}
+
+func (cfg *PostgresConfig) String() string {
+	return fmt.Sprintf("[DSN: %v, schema file: %v]", cfg.DSN, cfg.SchemaFile)
+}
+
+func newPostgresConfig() *PostgresConfig {
+	return &PostgresConfig{DSN: DSNDefault, SchemaFile: PGSchemaFileDefault}
+}
+
+type RepositoryConfig struct {
+	PG *PostgresConfig
+}
 
 type BackupConfig struct {
 	Interval time.Duration `env:"STORE_INTERVAL"`
@@ -36,10 +55,11 @@ func newBackupConfig() *BackupConfig {
 }
 
 type ServerConfig struct {
-	Address string `env:"ADDRESS"`
-	Key     string `env:"KEY"`
-	Logger  LoggerConfig
-	Backup  *BackupConfig
+	Address    string `env:"ADDRESS"`
+	Key        string `env:"KEY"`
+	Logger     LoggerConfig
+	Backup     *BackupConfig
+	Repository RepositoryConfig
 }
 
 func FromEnv() ServerOption {
@@ -58,6 +78,7 @@ func FromFlags() ServerOption {
 		storeInterval := flag.Duration("i", BackupIntervalDefault, "store interval")
 		storeFile := flag.String("f", BackupFileDefault, "json file path to store metrics")
 		logLevel := flag.String("l", LogLevelDefault, "log level, allowed [info, debug]")
+		dsn := flag.String("d", DSNDefault, "Postgres data source name")
 		flag.Parse()
 		cfg.Address = *address
 		cfg.Key = *key
@@ -65,18 +86,25 @@ func FromFlags() ServerOption {
 		cfg.Backup.Interval = *storeInterval
 		cfg.Backup.File = *storeFile
 		cfg.Logger.Level = *logLevel
+		cfg.Repository.PG.DSN = *dsn
 	}
 }
 
 func NewServerConfig(options ...ServerOption) *ServerConfig {
 	cfg := &ServerConfig{
-		Address: ServerAddressDefault,
-		Key:     KeyDefault,
-		Backup:  newBackupConfig(),
-		Logger:  newLoggerConfig(),
+		Address:    ServerAddressDefault,
+		Key:        KeyDefault,
+		Backup:     newBackupConfig(),
+		Logger:     newLoggerConfig(),
+		Repository: RepositoryConfig{PG: newPostgresConfig()},
 	}
 	for _, option := range options {
 		option(cfg)
 	}
+
+	if cfg.Repository.PG.DSN == DSNDefault { //TODO: wrap
+		cfg.Repository.PG = nil
+	}
+
 	return cfg
 }

@@ -21,7 +21,7 @@ type serverCollector struct {
 
 func (s *serverCollector) Run() {
 	wg := sync.WaitGroup{}
-	wg.Add(2)
+	wg.Add(1)
 
 	// run http server
 	go func() {
@@ -31,18 +31,23 @@ func (s *serverCollector) Run() {
 	}()
 
 	// run backup ticker
-	go func() {
-		defer wg.Done()
-		s.backuper.Run()
-	}()
+	if s.isBackuperEnabled() {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			s.backuper.Run()
+		}()
+	}
 
 	log.Infoln("Server collector started, addr:", s.httpServer.Addr)
 
 	wg.Wait()
 
 	// shutdown
-	if err := s.backuper.Backup(); err != nil {
-		log.Errorf("Failed to backup repository: %v", err)
+	if s.isBackuperEnabled() {
+		if err := s.backuper.Backup(); err != nil {
+			log.Errorf("Failed to backup repository: %v", err)
+		}
 	}
 
 	log.Infoln("Server collector stopped, addr:", s.httpServer.Addr)
@@ -55,15 +60,30 @@ func (s *serverCollector) Shutdown() {
 	if err != nil {
 		log.Errorln(err)
 	}
-	s.backuper.Shutdown()
+	if s.isBackuperEnabled() {
+		s.backuper.Shutdown()
+	}
+	err = s.repository.Shutdown()
+	if err != nil {
+		log.Errorln(err)
+	}
 }
 
 func NewServerCollector(cfg configs.ServerConfig) *serverCollector {
-	repository := storage.GetRepository()
+	var (
+		backuper backup.Backuper
+		err      error
+	)
 
-	backuper, err := backup.NewRepositoryBackup(cfg.Backup, repository)
+	repository, err := storage.GetRepository(cfg.Repository)
 	if err != nil {
-		log.Fatalln("NewServerCollector:", err)
+		log.Fatalln("Can't create repository, reason:", err)
+	}
+	if cfg.Repository.PG == nil { //TODO: сделать адекватно
+		backuper, err = backup.NewRepositoryBackup(cfg.Backup, repository) //TODO: вернуть FileRepository
+		if err != nil {
+			log.Fatalln("NewServerCollector:", err)
+		}
 	}
 
 	handler := handlers.NewCollectorHandler(repository, cfg.Key)
@@ -72,4 +92,8 @@ func NewServerCollector(cfg configs.ServerConfig) *serverCollector {
 		repository: repository,
 		backuper:   backuper,
 	}
+}
+
+func (s *serverCollector) isBackuperEnabled() bool {
+	return s.backuper != nil
 }

@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"github.com/unbeman/ya-prac-mcas/configs"
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 )
 
@@ -12,11 +13,16 @@ type Repository interface {
 	GetGauge(name string) metrics.Gauge
 
 	GetAll() []metrics.Metric
+
+	Ping() error
+	Shutdown() error
 }
 
-func GetRepository() Repository { //cfg configs.RepositoryConfig
+func GetRepository(cfg configs.RepositoryConfig) (Repository, error) { //cfg configs.RepositoryConfig
 	switch {
+	case cfg.PG != nil:
+		return NewPostgresRepository(*cfg.PG)
 	default:
-		return NewRAMRepository()
+		return NewRAMRepository(), nil
 	}
 }
