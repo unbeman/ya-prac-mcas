@@ -76,11 +76,14 @@ func (p *postgresRepository) GetAll() []metrics.Metric {
 	if err != nil {
 		log.Error(err)
 	}
+	defer rowsGauge.Close()
 
 	rowsCounter, err := p.connection.Query(queryCounter)
 	if err != nil {
 		log.Error(err)
 	}
+
+	defer rowsCounter.Close()
 
 	for rowsGauge.Next() {
 		var (
