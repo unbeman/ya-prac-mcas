@@ -16,7 +16,7 @@ type postgresRepository struct {
 }
 
 func (p *postgresRepository) AddCounter(name string, delta int64) metrics.Counter {
-	query := "INSERT into counter values ($1, $2) ON CONFLICT (name) DO UPDATE set value=$2 where counter.name=$1 RETURNING value"
+	query := "INSERT into counter values ($1, $2) ON CONFLICT (name) DO UPDATE set value=value+$2 where counter.name=$1 RETURNING value"
 	row := p.connection.QueryRow(query, name, delta)
 	err := row.Scan(&delta)
 	if err != nil {
