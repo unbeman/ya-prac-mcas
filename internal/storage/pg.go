@@ -98,6 +98,10 @@ func (p *postgresRepository) GetAll() []metrics.Metric {
 		gauge.Set(value)
 		metricSlice = append(metricSlice, gauge)
 	}
+	err = rowsGauge.Err()
+	if err != nil {
+		log.Infoln(err)
+	}
 
 	for rowsCounter.Next() {
 		var (
@@ -111,6 +115,11 @@ func (p *postgresRepository) GetAll() []metrics.Metric {
 		counter := metrics.NewCounter(name)
 		counter.Add(value)
 		metricSlice = append(metricSlice, counter)
+	}
+
+	err = rowsCounter.Err()
+	if err != nil {
+		log.Infoln(err)
 	}
 
 	return metricSlice
