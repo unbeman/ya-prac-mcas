@@ -85,7 +85,7 @@ func (am agentMetrics) SendMetric(ctx context.Context, m metrics.Metric) { //TOD
 }
 
 func (am agentMetrics) SendJSONMetrics(ctx context.Context, slice []metrics.Params) { //TODO: write http connector
-	url := fmt.Sprintf("http://%s/updates", am.address) //TODO: wrap
+	url := fmt.Sprintf("http://%s/updates/", am.address) //TODO: wrap
 
 	buf, err := json.Marshal(slice)
 	if err != nil {
