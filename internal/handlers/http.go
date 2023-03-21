@@ -41,7 +41,7 @@ func NewCollectorHandler(repository storage.Repository, key string) *CollectorHa
 			r.Post("/{type}/{name}/{value}", ch.UpdateMetricHandler())
 			r.Post("/", ch.UpdateJSONMetricHandler())
 		})
-		router.Post("/updates", ch.UpdateJSONMetricsHandler())
+		router.Post("/updates/", ch.UpdateJSONMetricsHandler())
 		router.Route("/value", func(r chi.Router) {
 			r.Get("/{type}/{name}", ch.GetMetricHandler())
 			r.Post("/", ch.GetJSONMetricHandler())
@@ -263,7 +263,11 @@ func (ch *CollectorHandler) UpdateJSONMetricsHandler() http.HandlerFunc {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
+		emptyAnswer := struct{}{}
+		if err := json.NewEncoder(writer).Encode(&emptyAnswer); err != nil {
+			log.Errorf("Write failed, %v\n", err)
+			return
+		}
 		writer.WriteHeader(http.StatusOK)
 	}
 }
