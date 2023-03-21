@@ -24,6 +24,26 @@ type Params struct { //TODO: make builder .TypeAndName() .Value()
 	Hash         string   `json:"hash,omitempty"`
 }
 
+type ParamsSlice []Params
+
+func (ps *ParamsSlice) ParseJson(reader io.Reader) error {
+	if err := json.NewDecoder(reader).Decode(ps); err != nil {
+		return err
+	}
+	for _, params := range *ps {
+		if err := CheckType(params.Type); err != nil {
+			return err
+		}
+		if err := CheckName(params.Name); err != nil {
+			return err
+		}
+		if err := CheckValues(params.ValueGauge, params.ValueCounter); err != nil {
+			return ErrInvalidValue
+		}
+	}
+	return nil
+}
+
 func (jm *Params) String() string {
 	var delta, value = "nil", "nil"
 	if jm.ValueCounter != nil {
@@ -35,8 +55,8 @@ func (jm *Params) String() string {
 	return fmt.Sprintf("{ID:%v; MType:%v; Delta:%v; Value:%v};", jm.Name, jm.Type, delta, value)
 }
 
-func (jm *Params) ParseURI(request *http.Request, requiredKeys ...string) error {
-	params := &Params{}
+func ParseURI(request *http.Request, requiredKeys ...string) (Params, error) {
+	params := Params{}
 	for _, key := range requiredKeys {
 		value := chi.URLParam(request, key)
 		//if len(value) == 0 {
@@ -46,12 +66,12 @@ func (jm *Params) ParseURI(request *http.Request, requiredKeys ...string) error 
 		case PType:
 			err := CheckType(value)
 			if err != nil {
-				return fmt.Errorf("ParseURI: %v - %w", key, err)
+				return params, fmt.Errorf("ParseURI: %v - %w", key, err)
 			}
 			params.Type = value
 		case PName:
 			if err := CheckName(value); err != nil {
-				return fmt.Errorf("ParseURI: %v - %w", key, err)
+				return params, fmt.Errorf("ParseURI: %v - %w", key, err)
 			}
 			params.Name = value
 		case PValue:
@@ -59,28 +79,46 @@ func (jm *Params) ParseURI(request *http.Request, requiredKeys ...string) error 
 			case GaugeType:
 				gValue, err := strconv.ParseFloat(value, 64)
 				if err != nil {
-					return fmt.Errorf("ParseURI: %v = %v - %w", key, value, ErrInvalidValue)
+					return params, fmt.Errorf("ParseURI: %v = %v - %w", key, value, ErrInvalidValue)
 				}
 				params.ValueGauge = &gValue
 			case CounterType:
 				cValue, err := strconv.ParseInt(value, 10, 64)
 				if err != nil {
-					return fmt.Errorf("ParseURI: %v = %v - %w", key, value, ErrInvalidValue)
+					return params, fmt.Errorf("ParseURI: %v = %v - %w", key, value, ErrInvalidValue)
 				}
 				params.ValueCounter = &cValue
 			}
 		default:
-			return fmt.Errorf("ParseURI: unknown parameter")
+			return params, fmt.Errorf("ParseURI: unknown parameter")
 		}
 	}
-	return nil
+	return params, nil
 }
 
-func (jm *Params) ParseJson(data io.Reader) error {
-	if err := json.NewDecoder(data).Decode(&jm); err != nil {
-		return err
+func ParseJson(data io.Reader, requiredKeys ...string) (Params, error) {
+	var params Params
+	if err := json.NewDecoder(data).Decode(&params); err != nil {
+		return params, err
 	}
-	return nil
+	for _, key := range requiredKeys {
+		switch key {
+		case PName:
+			if err := CheckName(params.Name); err != nil {
+				return params, err
+			}
+		case PType:
+			if err := CheckType(params.Type); err != nil {
+				return params, err
+			}
+		case PValue:
+			if err := CheckValues(params.ValueGauge, params.ValueCounter); err != nil {
+				return params, ErrInvalidValue
+			}
+		}
+	}
+
+	return params, nil
 }
 
 func CheckType(typeStr string) error {
@@ -88,13 +126,20 @@ func CheckType(typeStr string) error {
 	case GaugeType, CounterType:
 		return nil
 	default:
-		return fmt.Errorf("CheckType: %v - %w", typeStr, ErrInvalidType)
+		return fmt.Errorf("CheckType: (%v) - %w", typeStr, ErrInvalidType)
 	}
 }
 
 func CheckName(name string) error {
 	if len(name) == 0 {
-		return fmt.Errorf("CheckType: %v - %w", name, ErrInvalidValue)
+		return fmt.Errorf("CheckName: (%v) - %w", name, ErrInvalidValue)
+	}
+	return nil
+}
+
+func CheckValues(valueGauge *float64, valueCounter *int64) error {
+	if valueGauge == nil && valueCounter == nil {
+		return fmt.Errorf("CheckValues: %w", ErrInvalidValue)
 	}
 	return nil
 }

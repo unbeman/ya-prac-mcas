@@ -126,33 +126,22 @@ func NewCounter(name string) *counter {
 	return &counter{name: name, value: &v}
 }
 
-func NewCounterFromParams(params Params) (*counter, error) {
-	if err := CheckName(params.Name); err != nil {
-		return nil, err
-	}
-	return &counter{name: params.Name, value: params.ValueCounter}, nil
+func NewCounterFromParams(params Params) *counter {
+	return &counter{name: params.Name, value: params.ValueCounter}
 }
 
-func NewGaugeFromParams(params Params) (*gauge, error) {
-	if err := CheckName(params.Name); err != nil {
-		return nil, err
-	}
-	return &gauge{name: params.Name, value: params.ValueGauge}, nil
+func NewGaugeFromParams(params Params) *gauge {
+	return &gauge{name: params.Name, value: params.ValueGauge}
 }
 
-func NewMetricFromParams(params Params) (Metric, error) {
-	var (
-		metric Metric
-		err    error
-	)
-	if err := CheckType(params.Type); err != nil {
-		return nil, err
-	}
+func NewMetricFromParams(params Params) Metric {
+	var metric Metric
+
 	switch params.Type {
 	case CounterType:
-		metric, err = NewCounterFromParams(params)
+		metric = NewCounterFromParams(params)
 	case GaugeType:
-		metric, err = NewGaugeFromParams(params)
+		metric = NewGaugeFromParams(params)
 	}
-	return metric, err
+	return metric
 }
