@@ -33,7 +33,8 @@ func newPostgresConfig() *PostgresConfig {
 }
 
 type RepositoryConfig struct {
-	PG *PostgresConfig
+	RAMWithBackup *BackupConfig
+	PG            *PostgresConfig
 }
 
 type BackupConfig struct {
@@ -58,7 +59,6 @@ type ServerConfig struct {
 	Address    string `env:"ADDRESS"`
 	Key        string `env:"KEY"`
 	Logger     LoggerConfig
-	Backup     *BackupConfig
 	Repository RepositoryConfig
 }
 
@@ -82,11 +82,11 @@ func FromFlags() ServerOption {
 		flag.Parse()
 		cfg.Address = *address
 		cfg.Key = *key
-		cfg.Backup.Restore = *restore
-		cfg.Backup.Interval = *storeInterval
-		cfg.Backup.File = *storeFile
-		cfg.Logger.Level = *logLevel
+		cfg.Repository.RAMWithBackup.Restore = *restore
+		cfg.Repository.RAMWithBackup.Interval = *storeInterval
+		cfg.Repository.RAMWithBackup.File = *storeFile
 		cfg.Repository.PG.DSN = *dsn
+		cfg.Logger.Level = *logLevel
 	}
 }
 
@@ -94,9 +94,8 @@ func NewServerConfig(options ...ServerOption) *ServerConfig {
 	cfg := &ServerConfig{
 		Address:    ServerAddressDefault,
 		Key:        KeyDefault,
-		Backup:     newBackupConfig(),
 		Logger:     newLoggerConfig(),
-		Repository: RepositoryConfig{PG: newPostgresConfig()},
+		Repository: RepositoryConfig{RAMWithBackup: newBackupConfig(), PG: newPostgresConfig()},
 	}
 	for _, option := range options {
 		option(cfg)
@@ -104,6 +103,10 @@ func NewServerConfig(options ...ServerOption) *ServerConfig {
 
 	if cfg.Repository.PG.DSN == DSNDefault { //TODO: wrap
 		cfg.Repository.PG = nil
+	}
+
+	if len(cfg.Repository.RAMWithBackup.File) == 0 { //TODO: wrap
+		cfg.Repository.RAMWithBackup = nil
 	}
 
 	return cfg

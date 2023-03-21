@@ -7,13 +7,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/unbeman/ya-prac-mcas/configs"
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
-	"github.com/unbeman/ya-prac-mcas/internal/parser"
 )
 
 type Sender interface {
@@ -44,15 +42,8 @@ func NewAgentMetrics(cfg *configs.AgentConfig) *agentMetrics {
 func (am *agentMetrics) Report(ctx context.Context, ms map[string]metrics.Metric) {
 	ctx2, cancel := context.WithTimeout(ctx, am.reportTimeout)
 	defer cancel()
-	var wg sync.WaitGroup
-	for _, metric := range ms {
-		wg.Add(1)
-		go func(m metrics.Metric) {
-			am.SendJSONMetric(ctx2, m)
-			wg.Done()
-		}(metric)
-	}
-	wg.Wait()
+	paramSlice := am.prepareMetrics(ms)
+	am.SendJSONMetrics(ctx2, paramSlice)
 }
 
 func (am *agentMetrics) DoWork(ctx context.Context) {
@@ -93,11 +84,37 @@ func (am agentMetrics) SendMetric(ctx context.Context, m metrics.Metric) { //TOD
 	log.Debugf("Received status code: %v for post request to %v\n", response.StatusCode, url)
 }
 
+func (am agentMetrics) SendJSONMetrics(ctx context.Context, slice []metrics.Params) { //TODO: write http connector
+	url := fmt.Sprintf("http://%s/updates", am.address) //TODO: wrap
+
+	buf, err := json.Marshal(slice)
+	if err != nil {
+		log.Fatalf("Json marshal failed, %v\n", err)
+		return
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(buf))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	request.Header.Set("Content-Type", "text/plain")
+	response, err := am.client.Do(request)
+	if err != nil {
+		log.Errorln(err)
+		return
+	}
+	defer response.Body.Close()
+	_, err = io.Copy(io.Discard, response.Body)
+	if err != nil {
+		log.Errorln(err)
+	}
+	log.Debugf("Received status code: %v for post request to %v\n", response.StatusCode, url)
+}
+
 func (am agentMetrics) SendJSONMetric(ctx context.Context, m metrics.Metric) { //TODO: write http connector
 	url := fmt.Sprintf("http://%s/update", am.address) //TODO: wrap
-	jsonMetric := parser.MetricToJSON(m)
-	jsonMetric.Hash = am.getHash(m)
-	buf, err := json.Marshal(jsonMetric)
+	params := m.ToParams()
+	params.Hash = am.getHash(m)
+	buf, err := json.Marshal(params)
 	if err != nil {
 		log.Fatalf("Json marshal failed, %v\n", err)
 		return
@@ -129,4 +146,14 @@ func (am agentMetrics) getHash(metric metrics.Metric) string {
 
 func FormatURL(addr string, m metrics.Metric) string {
 	return fmt.Sprintf("http://%v/update/%v/%v/%v", addr, m.GetType(), m.GetName(), m.GetValue())
+}
+
+func (am agentMetrics) prepareMetrics(ms map[string]metrics.Metric) []metrics.Params {
+	paramSlice := make([]metrics.Params, 0, len(ms))
+	for _, metric := range ms {
+		params := metric.ToParams()
+		params.Hash = am.getHash(metric)
+		paramSlice = append(paramSlice, params)
+	}
+	return paramSlice
 }
