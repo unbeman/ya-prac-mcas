@@ -26,7 +26,7 @@ type Params struct { //TODO: make builder .TypeAndName() .Value()
 
 type ParamsSlice []Params
 
-func (ps *ParamsSlice) ParseJson(reader io.Reader) error {
+func (ps *ParamsSlice) ParseJSON(reader io.Reader) error {
 	if err := json.NewDecoder(reader).Decode(ps); err != nil {
 		return err
 	}
@@ -96,7 +96,7 @@ func ParseURI(request *http.Request, requiredKeys ...string) (Params, error) {
 	return params, nil
 }
 
-func ParseJson(data io.Reader, requiredKeys ...string) (Params, error) {
+func ParseJSON(data io.Reader, requiredKeys ...string) (Params, error) {
 	var params Params
 	if err := json.NewDecoder(data).Decode(&params); err != nil {
 		return params, err

@@ -146,7 +146,7 @@ func (ch *CollectorHandler) GetJSONMetricHandler() http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
 
-		params, err := metrics.ParseJson(request.Body, metrics.PName, metrics.PType)
+		params, err := metrics.ParseJSON(request.Body, metrics.PName, metrics.PType)
 		if errors.Is(err, metrics.ErrInvalidType) {
 			http.Error(writer, err.Error(), http.StatusNotImplemented)
 			return
@@ -184,8 +184,7 @@ func (ch *CollectorHandler) UpdateJSONMetricHandler() http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
 
-		var params metrics.Params
-		params, err := metrics.ParseJson(request.Body, metrics.PName, metrics.PType, metrics.PValue)
+		params, err := metrics.ParseJSON(request.Body, metrics.PName, metrics.PType, metrics.PValue)
 		if errors.Is(err, metrics.ErrInvalidType) {
 			http.Error(writer, err.Error(), http.StatusNotImplemented)
 			return
@@ -226,7 +225,7 @@ func (ch *CollectorHandler) UpdateJSONMetricsHandler() http.HandlerFunc {
 		writer.Header().Set("Content-Type", "application/json")
 
 		paramsSlice := metrics.ParamsSlice{}
-		err := paramsSlice.ParseJson(request.Body)
+		err := paramsSlice.ParseJSON(request.Body)
 
 		if errors.Is(err, metrics.ErrInvalidType) {
 			http.Error(writer, err.Error(), http.StatusNotImplemented)
