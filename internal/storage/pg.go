@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"os"
 
 	log "github.com/sirupsen/logrus"
 
@@ -179,35 +180,12 @@ func (p *postgresRepository) Shutdown() error {
 }
 
 func (p *postgresRepository) createSchemaIfNotExist(filename string) {
-
-	script := `create table if not exists counter
-(
-    name text not null
-    constraint counter_pk
-    primary key,
-    value bigint not null
-);
-
-alter table counter owner to postgres;
-
-create unique index if not exists counter_name_uindex
-    on counter (name);
-
-create table if not exists gauge
-(
-    name text not null
-    constraint gauge_pk
-    primary key,
-    value double precision not null
-);
-
-alter table gauge owner to postgres;
-
-create unique index if not exists gauge_name_uindex
-    on gauge (name);
-
-`
-	_, err := p.connection.Exec(script)
+	text, err := os.ReadFile(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	script := string(text)
+	_, err = p.connection.Exec(script)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -218,9 +196,9 @@ func NewPostgresRepository(cfg configs.PostgresConfig) (*postgresRepository, err
 	if err != nil {
 		return nil, err
 	}
-	pg := &postgresRepository{connection: connection, statements: NewStatements(connection)}
+	pg := &postgresRepository{connection: connection}
 	pg.createSchemaIfNotExist(cfg.SchemaFile)
-
+	pg.statements = NewStatements(connection)
 	return pg, nil
 }
 
