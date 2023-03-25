@@ -34,6 +34,7 @@ func (s *serverCollector) Run() {
 		go func() {
 			defer wg.Done()
 			backuper.Run()
+			log.Debugf("Backupper Run is end")
 		}()
 	}
 
@@ -41,24 +42,23 @@ func (s *serverCollector) Run() {
 
 	wg.Wait()
 
-	log.Infoln("Server collector stopped, addr:", s.httpServer.Addr)
-
 	if backuper, ok := s.repository.(storage.Backuper); ok {
 		err := backuper.Backup()
 		if err != nil {
 			log.Error(err)
 		}
 	}
+
+	log.Infoln("Server collector stopped, addr:", s.httpServer.Addr)
 }
 
 func (s *serverCollector) Shutdown() {
-
 	log.Infoln("Shutting down")
 	err := s.httpServer.Shutdown(context.TODO())
 	if err != nil {
 		log.Errorln(err)
 	}
-	//не успевает
+
 	err = s.repository.Shutdown()
 	if err != nil {
 		log.Errorln(err)

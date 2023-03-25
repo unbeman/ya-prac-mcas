@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -45,12 +44,6 @@ func NewRAMBackupRepository(cfg *configs.BackupConfig) (*BackupRepository, error
 		}
 	}
 
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		rb.Run()
-	}()
 	return rb, nil
 }
 
@@ -132,6 +125,7 @@ func (br *BackupRepository) Run() {
 		select {
 		case <-br.closing:
 			log.Infoln("Backup ticker stopped")
+			return
 		case <-ticker.C:
 			if err := br.Backup(); err != nil {
 				log.Error(err)
