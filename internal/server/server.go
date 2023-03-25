@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
 
@@ -27,11 +28,27 @@ func (s *serverCollector) Run() {
 		log.Infoln("serverCollector.Run()", err)
 	}()
 
+	// run backup ticker
+	if backuper, ok := s.repository.(storage.Backuper); ok {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			backuper.Run()
+		}()
+	}
+
 	log.Infoln("Server collector started, addr:", s.httpServer.Addr)
 
 	wg.Wait()
 
 	log.Infoln("Server collector stopped, addr:", s.httpServer.Addr)
+
+	if backuper, ok := s.repository.(storage.Backuper); ok {
+		err := backuper.Backup()
+		if err != nil {
+			log.Error(err)
+		}
+	}
 }
 
 func (s *serverCollector) Shutdown() {
@@ -48,15 +65,15 @@ func (s *serverCollector) Shutdown() {
 	}
 }
 
-func NewServerCollector(cfg configs.ServerConfig) *serverCollector {
+func NewServerCollector(cfg configs.ServerConfig) (*serverCollector, error) {
 	repository, err := storage.GetRepository(cfg.Repository)
 	if err != nil {
-		log.Fatalln("Can't create repository, reason:", err)
+		return nil, fmt.Errorf("Can't create repository, reason: %v", err)
 	}
 
 	handler := handlers.NewCollectorHandler(repository, cfg.Key)
 	return &serverCollector{
 		httpServer: http.Server{Addr: cfg.Address, Handler: handler},
 		repository: repository,
-	}
+	}, nil
 }

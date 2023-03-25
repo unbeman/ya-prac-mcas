@@ -14,22 +14,22 @@ const (
 	BackupFileDefault     = "/tmp/devops-metrics-db.json"
 	RestoreDefault        = true
 	DSNDefault            = ""
-	PGSchemaFileDefault   = "./pg-schema.sql"
+	PGMigrationDirDefault = "migrations"
 )
 
 type ServerOption func(config *ServerConfig)
 
 type PostgresConfig struct {
-	DSN        string `env:"DATABASE_DSN"`
-	SchemaFile string
+	DSN          string `env:"DATABASE_DSN"`
+	MigrationDir string `env:"MIGRATION_DIR"`
 }
 
 func (cfg *PostgresConfig) String() string {
-	return fmt.Sprintf("[DSN: %v, schema file: %v]", cfg.DSN, cfg.SchemaFile)
+	return fmt.Sprintf("[DSN: %v, MigrationDir: %v]", cfg.DSN, cfg.MigrationDir)
 }
 
 func newPostgresConfig() *PostgresConfig {
-	return &PostgresConfig{DSN: DSNDefault, SchemaFile: PGSchemaFileDefault}
+	return &PostgresConfig{DSN: DSNDefault, MigrationDir: PGMigrationDirDefault}
 }
 
 type RepositoryConfig struct {

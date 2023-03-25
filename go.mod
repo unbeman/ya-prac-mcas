@@ -7,6 +7,7 @@ require (
 	github.com/chi-middleware/logrus-logger v0.2.0
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/jackc/pgx/v5 v5.3.1
+	github.com/pressly/goose/v3 v3.10.0
 	github.com/sirupsen/logrus v1.9.0
 )
 

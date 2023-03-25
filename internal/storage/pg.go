@@ -5,11 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"os"
-
-	log "github.com/sirupsen/logrus"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/pressly/goose/v3"
+	log "github.com/sirupsen/logrus"
+
 	"github.com/unbeman/ya-prac-mcas/configs"
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 )
@@ -179,16 +179,11 @@ func (p *postgresRepository) Shutdown() error {
 	return err
 }
 
-func (p *postgresRepository) createSchemaIfNotExist(filename string) {
-	text, err := os.ReadFile(filename)
-	if err != nil {
-		log.Fatal(err)
+func (p *postgresRepository) migrate(directory string) error {
+	if err := goose.SetDialect("postgres"); err != nil {
+		return err
 	}
-	script := string(text)
-	_, err = p.connection.Exec(script)
-	if err != nil {
-		log.Fatalln(err)
-	}
+	return goose.Up(p.connection, directory)
 }
 
 func NewPostgresRepository(cfg configs.PostgresConfig) (*postgresRepository, error) {
@@ -197,24 +192,35 @@ func NewPostgresRepository(cfg configs.PostgresConfig) (*postgresRepository, err
 		return nil, err
 	}
 	pg := &postgresRepository{connection: connection}
-	pg.createSchemaIfNotExist(cfg.SchemaFile)
-	pg.statements = NewStatements(connection)
+	err = pg.migrate(cfg.MigrationDir)
+	if err != nil {
+		return nil, err
+	}
+	pg.statements, err = NewStatements(connection)
+	if err != nil {
+		return nil, err
+	}
 	return pg, nil
 }
 
-func NewStatements(conn *sql.DB) Statements {
+func NewStatements(conn *sql.DB) (Statements, error) {
+	var err error
 	s := Statements{}
-	s.GetCounter = newStatement(conn, "SELECT value FROM counter WHERE name=$1")
-	s.AddCounter = newStatement(conn, "INSERT into counter values ($1, $2) ON CONFLICT (name) DO UPDATE set value=counter.value+$2 where counter.name=$1 RETURNING value")
-	s.GetGauge = newStatement(conn, "SELECT value FROM gauge WHERE name=$1")
-	s.SetGauge = newStatement(conn, "INSERT into gauge values ($1, $2) ON CONFLICT (name) DO UPDATE set value=$2 where gauge.name=$1")
-	return s
-}
-
-func newStatement(conn *sql.DB, query string) *sql.Stmt {
-	stmt, err := conn.Prepare(query)
+	s.GetCounter, err = conn.Prepare("SELECT value FROM counter WHERE name=$1")
 	if err != nil {
-		log.Fatal(err)
+		return s, err
 	}
-	return stmt
+	s.AddCounter, err = conn.Prepare("INSERT into counter values ($1, $2) ON CONFLICT (name) DO UPDATE set value=counter.value+$2 where counter.name=$1 RETURNING value")
+	if err != nil {
+		return s, err
+	}
+	s.GetGauge, err = conn.Prepare("SELECT value FROM gauge WHERE name=$1")
+	if err != nil {
+		return s, err
+	}
+	s.SetGauge, err = conn.Prepare("INSERT into gauge values ($1, $2) ON CONFLICT (name) DO UPDATE set value=$2 where gauge.name=$1")
+	if err != nil {
+		return s, err
+	}
+	return s, nil
 }

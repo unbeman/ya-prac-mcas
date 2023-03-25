@@ -19,7 +19,11 @@ func main() {
 
 	log.Debugf("SERVER CONFIG %+v\n", cfg)
 
-	collectorServer := server.NewServerCollector(cfg)
+	collectorServer, err := server.NewServerCollector(cfg)
+	if err != nil {
+		log.Error(err)
+		return
+	}
 
 	go func() {
 		exit := make(chan os.Signal, 1)
