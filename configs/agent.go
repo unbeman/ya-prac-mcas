@@ -20,9 +20,9 @@ type AgentOption func(config *AgentConfig)
 
 type HttConnectionConfig struct {
 	Address       string `env:"ADDRESS"`
+	RateLimit     int    `env:"RATE_LIMIT"`
 	ClientTimeout time.Duration
 	ReportTimeout time.Duration
-	RateLimit     int `env:"RATE_LIMIT"`
 }
 
 func newHttConnectionConfig() HttConnectionConfig {
@@ -51,18 +51,18 @@ func (cfg *AgentConfig) FromEnv() *AgentConfig {
 
 func (cfg *AgentConfig) FromFlags() *AgentConfig {
 	address := flag.String("a", ServerAddressDefault, "metrics collection server address")
+	rateLimit := flag.Int("l", RateLimitDefault, "rate limit")
 	key := flag.String("k", KeyDefault, "key for calculating the metric hash")
 	pollInterval := flag.Duration("p", PollIntervalDefault, "poll interval")
 	reportInterval := flag.Duration("r", ReportIntervalDefault, "report interval")
 	logLevel := flag.String("e", LogLevelDefault, "log level, allowed [info, debug]")
-	rateLimit := flag.Int("l", RateLimitDefault, "rate limit")
 	flag.Parse()
-	cfg.Connection.Address = *address
 	cfg.Key = *key
 	cfg.PollInterval = *pollInterval
 	cfg.ReportInterval = *reportInterval
-	cfg.Logger.Level = *logLevel
+	cfg.Connection.Address = *address
 	cfg.Connection.RateLimit = *rateLimit
+	cfg.Logger.Level = *logLevel
 	return cfg
 }
 
