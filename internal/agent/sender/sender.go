@@ -30,7 +30,7 @@ type httpSender struct {
 	rateLimiter *rate.Limiter
 }
 
-func NewHttpSender(cfg configs.HttConnectionConfig) *httpSender {
+func NewHTTPSender(cfg configs.HttConnectionConfig) *httpSender {
 	client := http.Client{Timeout: cfg.ClientTimeout}
 	rl := rate.NewLimiter(rate.Every(1*time.Second), cfg.RateLimit) //не больше rateLimit запросов в секунду
 	return &httpSender{

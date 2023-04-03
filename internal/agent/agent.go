@@ -23,7 +23,7 @@ type agentMetrics struct {
 }
 
 func NewAgentMetrics(cfg *configs.AgentConfig) *agentMetrics {
-	reporter := sender.NewHttpSender(cfg.Connection)
+	reporter := sender.NewHTTPSender(cfg.Connection)
 	collector := NewMetricsCollection()
 	tickerPool := utils.NewTickerPool()
 	return &agentMetrics{
