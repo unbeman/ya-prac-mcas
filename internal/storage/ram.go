@@ -36,16 +36,20 @@ func (rs *ramRepository) GetCounter(ctx context.Context, name string) (metrics.C
 	return rs.getCounter(name)
 }
 
-func (rs *ramRepository) AddCounter(ctx context.Context, name string, value int64) (metrics.Counter, error) {
-	rs.Lock()
-	defer rs.Unlock()
+func (rs *ramRepository) addCounter(ctx context.Context, name string, value int64) (metrics.Counter, error) {
 	counter, err := rs.getCounter(name)
 	if errors.Is(err, ErrNotFound) {
-		counter = metrics.NewCounter(name)
+		counter = metrics.NewCounter(name, 0)
 		rs.counterStorage[name] = counter
 	}
 	counter.Add(value)
 	return counter, nil
+}
+
+func (rs *ramRepository) AddCounter(ctx context.Context, name string, value int64) (metrics.Counter, error) {
+	rs.Lock()
+	defer rs.Unlock()
+	return rs.addCounter(ctx, name, value)
 }
 
 func (rs *ramRepository) getGauge(name string) (metrics.Gauge, error) {
@@ -62,16 +66,20 @@ func (rs *ramRepository) GetGauge(ctx context.Context, name string) (metrics.Gau
 	return rs.getGauge(name)
 }
 
-func (rs *ramRepository) SetGauge(ctx context.Context, name string, value float64) (metrics.Gauge, error) {
-	rs.Lock()
-	defer rs.Unlock()
+func (rs *ramRepository) setGauge(ctx context.Context, name string, value float64) (metrics.Gauge, error) {
 	gauge, err := rs.getGauge(name)
 	if errors.Is(err, ErrNotFound) {
-		gauge = metrics.NewGauge(name)
+		gauge = metrics.NewGauge(name, 0)
 		rs.gaugeStorage[name] = gauge
 	}
 	gauge.Set(value)
 	return gauge, nil
+}
+
+func (rs *ramRepository) SetGauge(ctx context.Context, name string, value float64) (metrics.Gauge, error) {
+	rs.Lock()
+	defer rs.Unlock()
+	return rs.setGauge(ctx, name, value)
 }
 
 func (rs *ramRepository) GetAll(ctx context.Context) ([]metrics.Metric, error) {
@@ -89,9 +97,11 @@ func (rs *ramRepository) GetAll(ctx context.Context) ([]metrics.Metric, error) {
 }
 
 func (rs *ramRepository) AddCounters(ctx context.Context, slice []metrics.Counter) error {
+	rs.Lock()
+	defer rs.Unlock()
 	var err error
 	for _, counter := range slice {
-		_, err = rs.AddCounter(ctx, counter.GetName(), counter.Value())
+		_, err = rs.addCounter(ctx, counter.GetName(), counter.Value())
 		if err != nil {
 			return err
 		}
@@ -100,9 +110,11 @@ func (rs *ramRepository) AddCounters(ctx context.Context, slice []metrics.Counte
 }
 
 func (rs *ramRepository) SetGauges(ctx context.Context, slice []metrics.Gauge) error {
+	rs.Lock()
+	defer rs.Unlock()
 	var err error
 	for _, gauge := range slice {
-		_, err = rs.SetGauge(ctx, gauge.GetName(), gauge.Value())
+		_, err = rs.setGauge(ctx, gauge.GetName(), gauge.Value())
 		if err != nil {
 			return err
 		}

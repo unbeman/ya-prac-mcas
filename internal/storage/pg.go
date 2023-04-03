@@ -32,8 +32,7 @@ func (p *postgresRepository) AddCounter(ctx context.Context, name string, delta 
 	if err != nil {
 		return nil, err
 	}
-	counter := metrics.NewCounter(name)
-	counter.Add(delta)
+	counter := metrics.NewCounter(name, delta)
 	return counter, nil
 }
 
@@ -47,8 +46,7 @@ func (p *postgresRepository) GetCounter(ctx context.Context, name string) (metri
 	if err != nil {
 		return nil, err
 	}
-	counter := metrics.NewCounter(name)
-	counter.Add(value)
+	counter := metrics.NewCounter(name, value)
 	return counter, nil
 }
 
@@ -57,8 +55,7 @@ func (p *postgresRepository) SetGauge(ctx context.Context, name string, value fl
 	if err != nil {
 		log.Error(err)
 	}
-	gauge := metrics.NewGauge(name)
-	gauge.Set(value)
+	gauge := metrics.NewGauge(name, value)
 	return gauge, nil
 }
 
@@ -72,8 +69,7 @@ func (p *postgresRepository) GetGauge(ctx context.Context, name string) (metrics
 	if err != nil {
 		return nil, err
 	}
-	gauge := metrics.NewGauge(name)
-	gauge.Set(value)
+	gauge := metrics.NewGauge(name, value)
 	return gauge, nil
 }
 
@@ -105,8 +101,7 @@ func (p *postgresRepository) GetAll(ctx context.Context) ([]metrics.Metric, erro
 		if err != nil {
 			log.Error(err)
 		}
-		gauge := metrics.NewGauge(name)
-		gauge.Set(value)
+		gauge := metrics.NewGauge(name, value)
 		metricSlice = append(metricSlice, gauge)
 	}
 	err = rowsGauge.Err()
@@ -123,8 +118,7 @@ func (p *postgresRepository) GetAll(ctx context.Context) ([]metrics.Metric, erro
 		if err != nil {
 			return nil, err
 		}
-		counter := metrics.NewCounter(name)
-		counter.Add(value)
+		counter := metrics.NewCounter(name, value)
 		metricSlice = append(metricSlice, counter)
 	}
 

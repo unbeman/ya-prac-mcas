@@ -1,28 +1,21 @@
 package agent
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/unbeman/ya-prac-mcas/internal/agent/sender"
+	"github.com/unbeman/ya-prac-mcas/internal/utils"
 
 	"github.com/unbeman/ya-prac-mcas/configs"
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 )
 
-type Sender interface {
-	SendMetric(ctx context.Context, m metrics.Metric)
-}
-
 type agentMetrics struct {
-	address        string
-	client         http.Client
+	reporter       sender.Sender
 	collection     *MetricsCollection
+	tickerPool     *utils.TickerPool
 	hashKey        []byte
 	pollInterval   time.Duration
 	reportInterval time.Duration
@@ -30,112 +23,32 @@ type agentMetrics struct {
 }
 
 func NewAgentMetrics(cfg *configs.AgentConfig) *agentMetrics {
-	return &agentMetrics{address: cfg.Address,
-		client:         http.Client{Timeout: cfg.Connection.ClientTimeout},
-		collection:     NewMetricsCollection(),
+	reporter := sender.NewHttpSender(cfg.Connection)
+	collector := NewMetricsCollection()
+	tickerPool := utils.NewTickerPool()
+	return &agentMetrics{
+		reporter:       reporter,
+		collection:     collector,
+		tickerPool:     tickerPool,
 		hashKey:        []byte(cfg.Key),
 		pollInterval:   cfg.PollInterval,
 		reportInterval: cfg.ReportInterval,
-		reportTimeout:  cfg.ReportTimeout,
 	}
 }
 
-func (am *agentMetrics) Report(ctx context.Context, ms map[string]metrics.Metric) {
-	ctx2, cancel := context.WithTimeout(ctx, am.reportTimeout)
-	defer cancel()
-	paramSlice := am.prepareMetrics(ms)
-	am.SendJSONMetrics(ctx2, paramSlice)
+func (am *agentMetrics) Report(ctx context.Context) {
+	paramSlice := am.prepareMetrics(am.collection.GetMetrics(ctx))
+	am.reporter.SendJSONMetrics(ctx, paramSlice)
 }
 
-func (am *agentMetrics) DoWork(ctx context.Context) {
+func (am *agentMetrics) Run(ctx context.Context) {
 	log.Infoln("Agent started")
-	reportTicker := time.NewTicker(am.reportInterval)
-	pollTicker := time.NewTicker(am.pollInterval)
-	for {
-		select {
-		case <-ctx.Done():
-			log.Infoln("Worker stopped by context")
-			return
-		case <-reportTicker.C:
-			am.Report(ctx, am.collection.GetMetrics())
-			am.collection.PollCount = metrics.NewCounter("PollCount")
-		case <-pollTicker.C:
-			UpdateMetrics(am.collection)
-		}
-	}
-}
 
-func (am agentMetrics) SendMetric(ctx context.Context, m metrics.Metric) { //TODO: write http connector
-	url := FormatURL(am.address, m)
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	request.Header.Set("Content-Type", "text/plain")
-	response, err := am.client.Do(request)
-	if err != nil {
-		log.Errorln(err)
-		return
-	}
-	defer response.Body.Close()
-	_, err = io.Copy(io.Discard, response.Body)
-	if err != nil {
-		fmt.Println(err)
-	}
-	log.Debugf("Received status code: %v for post request to %v\n", response.StatusCode, url)
-}
+	am.tickerPool.AddTask("UpdateRuntimeMetrics", am.collection.UpdateRuntimeMetrics, ctx, am.pollInterval)
+	am.tickerPool.AddTask("UpdateMemCPUMetrics", am.collection.UpdateMemCPUMetrics, ctx, am.pollInterval)
+	am.tickerPool.AddTask("Report", am.Report, ctx, am.reportInterval)
 
-func (am agentMetrics) SendJSONMetrics(ctx context.Context, slice []metrics.Params) { //TODO: write http connector
-	url := fmt.Sprintf("http://%s/updates/", am.address) //TODO: wrap
-
-	buf, err := json.Marshal(slice)
-	if err != nil {
-		log.Fatalf("Json marshal failed, %v\n", err)
-		return
-	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(buf))
-	if err != nil {
-		log.Fatalln(err)
-	}
-	request.Header.Set("Content-Type", "text/plain")
-	response, err := am.client.Do(request)
-	if err != nil {
-		log.Errorln(err)
-		return
-	}
-	defer response.Body.Close()
-	_, err = io.Copy(io.Discard, response.Body)
-	if err != nil {
-		log.Errorln(err)
-	}
-	log.Debugf("Received status code: %v for post request to %v\n", response.StatusCode, url)
-}
-
-func (am agentMetrics) SendJSONMetric(ctx context.Context, m metrics.Metric) { //TODO: write http connector
-	url := fmt.Sprintf("http://%s/update", am.address) //TODO: wrap
-	params := m.ToParams()
-	params.Hash = am.getHash(m)
-	buf, err := json.Marshal(params)
-	if err != nil {
-		log.Fatalf("Json marshal failed, %v\n", err)
-		return
-	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(buf))
-	if err != nil {
-		log.Fatalln(err)
-	}
-	request.Header.Set("Content-Type", "text/plain")
-	response, err := am.client.Do(request)
-	if err != nil {
-		log.Errorln(err)
-		return
-	}
-	defer response.Body.Close()
-	_, err = io.Copy(io.Discard, response.Body)
-	if err != nil {
-		log.Errorln(err)
-	}
-	log.Debugf("Received status code: %v for post request to %v\n", response.StatusCode, url)
+	am.tickerPool.Wait()
 }
 
 func (am agentMetrics) getHash(metric metrics.Metric) string {
@@ -145,11 +58,7 @@ func (am agentMetrics) getHash(metric metrics.Metric) string {
 	return metric.Hash(am.hashKey)
 }
 
-func FormatURL(addr string, m metrics.Metric) string {
-	return fmt.Sprintf("http://%v/update/%v/%v/%v", addr, m.GetType(), m.GetName(), m.GetValue())
-}
-
-func (am agentMetrics) prepareMetrics(ms map[string]metrics.Metric) []metrics.Params {
+func (am agentMetrics) prepareMetrics(ms []metrics.Metric) []metrics.Params {
 	paramSlice := make([]metrics.Params, 0, len(ms))
 	for _, metric := range ms {
 		params := metric.ToParams()

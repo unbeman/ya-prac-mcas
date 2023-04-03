@@ -65,9 +65,8 @@ func (g *gauge) Value() float64 {
 	return *g.value
 }
 
-func NewGauge(name string) *gauge {
-	var v float64
-	return &gauge{name: name, value: &v}
+func NewGauge(name string, value float64) *gauge {
+	return &gauge{name: name, value: &value}
 }
 
 type Counter interface {
@@ -121,9 +120,8 @@ func (c *counter) Value() int64 {
 	return *c.value
 }
 
-func NewCounter(name string) *counter {
-	var v int64
-	return &counter{name: name, value: &v}
+func NewCounter(name string, value int64) *counter {
+	return &counter{name: name, value: &value}
 }
 
 func NewCounterFromParams(params Params) *counter {
