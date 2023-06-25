@@ -125,6 +125,7 @@ func (br *BackupRepository) Run() {
 	for {
 		select {
 		case <-br.closing:
+			ticker.Stop()
 			log.Infoln("Backup ticker stopped")
 			return
 		case <-ticker.C:

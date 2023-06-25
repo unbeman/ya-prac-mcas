@@ -22,10 +22,10 @@ func (tp *TickerPool) AddTask(ctx context.Context, name string, task func(ctx co
 	go func() {
 		defer tp.wg.Done()
 		ticker := time.NewTicker(interval)
-		defer ticker.Stop()
 		for {
 			select {
 			case <-ctx.Done():
+				ticker.Stop()
 				log.Infof("Task %v stopped", name)
 				return
 			case <-ticker.C:
