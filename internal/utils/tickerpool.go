@@ -17,7 +17,7 @@ func NewTickerPool() *TickerPool {
 	return &TickerPool{wg: sync.WaitGroup{}, done: make(chan struct{})}
 }
 
-func (tp *TickerPool) AddTask(name string, task func(ctx context.Context), ctx context.Context, interval time.Duration) {
+func (tp *TickerPool) AddTask(ctx context.Context, name string, task func(ctx context.Context), interval time.Duration) {
 	tp.wg.Add(1)
 	go func() {
 		defer tp.wg.Done()

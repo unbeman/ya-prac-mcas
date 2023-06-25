@@ -5,6 +5,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+
 	"github.com/unbeman/ya-prac-mcas/internal/agent/sender"
 	"github.com/unbeman/ya-prac-mcas/internal/utils"
 
@@ -44,9 +45,9 @@ func (am *agentMetrics) Report(ctx context.Context) {
 func (am *agentMetrics) Run(ctx context.Context) {
 	log.Infoln("Agent started")
 
-	am.tickerPool.AddTask("UpdateRuntimeMetrics", am.collection.UpdateRuntimeMetrics, ctx, am.pollInterval)
-	am.tickerPool.AddTask("UpdateMemCPUMetrics", am.collection.UpdateMemCPUMetrics, ctx, am.pollInterval)
-	am.tickerPool.AddTask("Report", am.Report, ctx, am.reportInterval)
+	am.tickerPool.AddTask(ctx, "UpdateRuntimeMetrics", am.collection.UpdateRuntimeMetrics, am.pollInterval)
+	am.tickerPool.AddTask(ctx, "UpdateMemCPUMetrics", am.collection.UpdateMemCPUMetrics, am.pollInterval)
+	am.tickerPool.AddTask(ctx, "Report", am.Report, am.reportInterval)
 
 	am.tickerPool.Wait()
 }
