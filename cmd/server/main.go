@@ -6,6 +6,7 @@ import (
 	"syscall"
 
 	log "github.com/sirupsen/logrus"
+
 	"github.com/unbeman/ya-prac-mcas/internal/logging"
 
 	"github.com/unbeman/ya-prac-mcas/configs"
@@ -35,11 +36,10 @@ func main() {
 			syscall.SIGQUIT,
 		)
 
-		for {
-			sig := <-exit
-			log.Infof("Got signal '%v'", sig)
-			collectorServer.Shutdown()
-		}
+		sig := <-exit
+		log.Infof("Got signal '%v'", sig)
+		collectorServer.Shutdown()
+
 	}()
 
 	collectorServer.Run()
