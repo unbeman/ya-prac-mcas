@@ -263,11 +263,12 @@ func (ch *CollectorHandler) UpdateJSONMetricsHandler() http.HandlerFunc {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		emptyAnswer := struct{}{}
-		if err := json.NewEncoder(writer).Encode(&emptyAnswer); err != nil {
+
+		if err := json.NewEncoder(writer).Encode(&paramsSlice); err != nil {
 			log.Errorf("Write failed, %v\n", err)
 			return
 		}
+
 		writer.WriteHeader(http.StatusOK)
 	}
 }
