@@ -1,22 +1,37 @@
 package storage
 
 import (
+	"context"
+	"errors"
+
+	"github.com/unbeman/ya-prac-mcas/configs"
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 )
 
+var ErrNotFound = errors.New("not found")
+
 type Repository interface {
-	AddCounter(name string, delta int64) metrics.Counter
-	GetCounter(name string) metrics.Counter
+	AddCounter(ctx context.Context, name string, delta int64) (metrics.Counter, error)
+	AddCounters(ctx context.Context, slice []metrics.Counter) error
+	GetCounter(ctx context.Context, name string) (metrics.Counter, error)
 
-	SetGauge(name string, value float64) metrics.Gauge
-	GetGauge(name string) metrics.Gauge
+	SetGauge(ctx context.Context, name string, value float64) (metrics.Gauge, error)
+	SetGauges(ctx context.Context, slice []metrics.Gauge) error
+	GetGauge(ctx context.Context, name string) (metrics.Gauge, error)
 
-	GetAll() []metrics.Metric
+	GetAll(ctx context.Context) ([]metrics.Metric, error)
+
+	Ping() error
+	Shutdown() error
 }
 
-func GetRepository() Repository { //cfg configs.RepositoryConfig
+func GetRepository(cfg configs.RepositoryConfig) (Repository, error) { //cfg configs.RepositoryConfig
 	switch {
+	case cfg.PG != nil:
+		return NewPostgresRepository(*cfg.PG)
+	case cfg.RAMWithBackup != nil:
+		return NewRAMBackupRepository(cfg.RAMWithBackup)
 	default:
-		return NewRAMRepository()
+		return NewRAMRepository(), nil
 	}
 }

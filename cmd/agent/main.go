@@ -13,10 +13,18 @@ import (
 	"github.com/unbeman/ya-prac-mcas/internal/logging"
 )
 
-// TODO: wrap to init agent
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, os.Interrupt)
-	defer func() {
+	go func() {
+		exit := make(chan os.Signal, 1)
+		signal.Notify(
+			exit,
+			os.Interrupt,
+			syscall.SIGTERM,
+			syscall.SIGINT,
+			syscall.SIGQUIT,
+		)
+		<-exit
 		cancel()
 		log.Println("Agent cancelled")
 	}()
@@ -27,7 +35,6 @@ func main() {
 
 	log.Infof("AGENT CONFIG %+v\n", cfg)
 
-	cm := agent.NewAgentMetrics(cfg)
-	cm.DoWork(ctx)
-	<-ctx.Done()
+	am := agent.NewAgentMetrics(cfg)
+	am.Run(ctx)
 }

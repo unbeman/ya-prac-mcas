@@ -2,11 +2,11 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/unbeman/ya-prac-mcas/internal/backup"
 
 	"github.com/unbeman/ya-prac-mcas/configs"
 	"github.com/unbeman/ya-prac-mcas/internal/handlers"
@@ -16,12 +16,11 @@ import (
 type serverCollector struct {
 	repository storage.Repository
 	httpServer http.Server
-	backuper   backup.Backuper
 }
 
 func (s *serverCollector) Run() {
 	wg := sync.WaitGroup{}
-	wg.Add(2)
+	wg.Add(1)
 
 	// run http server
 	go func() {
@@ -31,44 +30,51 @@ func (s *serverCollector) Run() {
 	}()
 
 	// run backup ticker
-	go func() {
-		defer wg.Done()
-		s.backuper.Run()
-	}()
+	if backuper, ok := s.repository.(storage.Backuper); ok {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			backuper.Run()
+			log.Debugf("Backupper Run is end")
+		}()
+	}
 
 	log.Infoln("Server collector started, addr:", s.httpServer.Addr)
 
 	wg.Wait()
 
-	// shutdown
-	if err := s.backuper.Backup(); err != nil {
-		log.Errorf("Failed to backup repository: %v", err)
+	if backuper, ok := s.repository.(storage.Backuper); ok {
+		err := backuper.Backup()
+		if err != nil {
+			log.Error(err)
+		}
 	}
 
 	log.Infoln("Server collector stopped, addr:", s.httpServer.Addr)
 }
 
 func (s *serverCollector) Shutdown() {
-
 	log.Infoln("Shutting down")
 	err := s.httpServer.Shutdown(context.TODO())
 	if err != nil {
 		log.Errorln(err)
 	}
-	s.backuper.Shutdown()
+
+	err = s.repository.Shutdown()
+	if err != nil {
+		log.Errorln(err)
+	}
 }
 
-func NewServerCollector(cfg configs.ServerConfig) *serverCollector {
-	repository := storage.GetRepository()
-
-	backuper, err := backup.NewRepositoryBackup(cfg.Backup, repository)
+func NewServerCollector(cfg configs.ServerConfig) (*serverCollector, error) {
+	repository, err := storage.GetRepository(cfg.Repository)
 	if err != nil {
-		log.Fatalln("NewServerCollector:", err)
+		return nil, fmt.Errorf("сan't create repository, reason: %v", err)
 	}
 
+	handler := handlers.NewCollectorHandler(repository, cfg.Key)
 	return &serverCollector{
-		httpServer: http.Server{Addr: cfg.Address, Handler: handlers.NewCollectorHandler(repository)},
+		httpServer: http.Server{Addr: cfg.Address, Handler: handler},
 		repository: repository,
-		backuper:   backuper,
-	}
+	}, nil
 }
