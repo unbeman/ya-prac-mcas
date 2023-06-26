@@ -96,30 +96,30 @@ func (rs *ramRepository) GetAll(ctx context.Context) ([]metrics.Metric, error) {
 	return metricSlice, nil
 }
 
-func (rs *ramRepository) AddCounters(ctx context.Context, slice []metrics.Counter) error {
+func (rs *ramRepository) AddCounters(ctx context.Context, slice []metrics.Counter) ([]metrics.Counter, error) {
 	rs.Lock()
 	defer rs.Unlock()
-	var err error
-	for _, counter := range slice {
-		_, err = rs.addCounter(ctx, counter.GetName(), counter.Value())
+	for idx, counter := range slice {
+		updatedCounter, err := rs.addCounter(ctx, counter.GetName(), counter.Value())
 		if err != nil {
-			return err
+			return nil, err
 		}
+		slice[idx] = updatedCounter
 	}
-	return nil
+	return slice, nil
 }
 
-func (rs *ramRepository) SetGauges(ctx context.Context, slice []metrics.Gauge) error {
+func (rs *ramRepository) SetGauges(ctx context.Context, slice []metrics.Gauge) ([]metrics.Gauge, error) {
 	rs.Lock()
 	defer rs.Unlock()
-	var err error
-	for _, gauge := range slice {
-		_, err = rs.setGauge(ctx, gauge.GetName(), gauge.Value())
+	for idx, gauge := range slice {
+		updatedGauge, err := rs.setGauge(ctx, gauge.GetName(), gauge.Value())
 		if err != nil {
-			return err
+			return nil, err
 		}
+		slice[idx] = updatedGauge
 	}
-	return nil
+	return slice, nil
 }
 
 func (rs *ramRepository) Shutdown() error {

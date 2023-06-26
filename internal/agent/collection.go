@@ -9,6 +9,7 @@ import (
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
 	log "github.com/sirupsen/logrus"
+
 	"github.com/unbeman/ya-prac-mcas/internal/storage"
 
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
@@ -56,7 +57,7 @@ func (am *MetricsCollection) UpdateRuntimeMetrics(ctx context.Context) {
 		metrics.NewGauge("TotalAlloc", float64(memStats.TotalAlloc)),
 		metrics.NewGauge("RandomValue", rand.Float64()),
 	}
-	err := am.storage.SetGauges(ctx, gaugeSlice)
+	_, err := am.storage.SetGauges(ctx, gaugeSlice)
 	if err != nil {
 		log.Error(err)
 	}
@@ -85,7 +86,7 @@ func (am *MetricsCollection) UpdateMemCPUMetrics(ctx context.Context) {
 		gaugeSlice = append(gaugeSlice, metrics.NewGauge(fmt.Sprintf("CPUutilization%d", idx+1), percent))
 	}
 
-	err = am.storage.SetGauges(ctx, gaugeSlice)
+	_, err = am.storage.SetGauges(ctx, gaugeSlice)
 	if err != nil {
 		log.Error(err)
 	}

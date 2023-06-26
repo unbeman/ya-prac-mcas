@@ -245,13 +245,13 @@ func (ch *CollectorHandler) UpdateJSONMetricsHandler(writer http.ResponseWriter,
 		}
 	}
 
-	err = ch.updateMetrics(request.Context(), gauges, counters)
+	metricsParams, err := ch.updateMetrics(request.Context(), gauges, counters)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if err := json.NewEncoder(writer).Encode(&paramsSlice); err != nil {
+	if err := json.NewEncoder(writer).Encode(&metricsParams); err != nil {
 		log.Errorf("Write failed, %v\n", err)
 		return
 	}
@@ -298,21 +298,37 @@ func (ch *CollectorHandler) updateMetric(ctx context.Context, params metrics.Par
 	return metric, err
 }
 
-func (ch *CollectorHandler) updateMetrics(ctx context.Context, gauges []metrics.Gauge, counters []metrics.Counter) error { //TODO: controller layer
-	var err error
+func (ch *CollectorHandler) updateMetrics(
+	ctx context.Context,
+	gauges []metrics.Gauge,
+	counters []metrics.Counter) (metrics.ParamsSlice, error) { //TODO: controller layer
+	metricsParams := make(metrics.ParamsSlice, 0, len(gauges)+len(counters))
+
 	if len(gauges) > 0 {
-		err = ch.Repository.SetGauges(ctx, gauges)
+		updatedGauges, err := ch.Repository.SetGauges(ctx, gauges)
 		if err != nil {
-			return err
+			return nil, err
+		}
+
+		for _, gauge := range updatedGauges {
+			gp := gauge.ToParams()
+			metricsParams = append(metricsParams, gp)
 		}
 	}
+
 	if len(counters) > 0 {
-		err = ch.Repository.AddCounters(ctx, counters)
+		updatedCounters, err := ch.Repository.AddCounters(ctx, counters)
 		if err != nil {
-			return err
+			return nil, err
 		}
+
+		for _, counter := range updatedCounters {
+			cp := counter.ToParams()
+			metricsParams = append(metricsParams, cp)
+		}
+
 	}
-	return nil
+	return metricsParams, nil
 }
 
 func (ch *CollectorHandler) isValidHash(hash string, metric metrics.Metric) bool {

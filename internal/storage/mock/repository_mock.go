@@ -51,11 +51,12 @@ func (mr *MockRepositoryMockRecorder) AddCounter(arg0, arg1, arg2 interface{}) *
 }
 
 // AddCounters mocks base method.
-func (m *MockRepository) AddCounters(arg0 context.Context, arg1 []metrics.Counter) error {
+func (m *MockRepository) AddCounters(arg0 context.Context, arg1 []metrics.Counter) ([]metrics.Counter, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddCounters", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].([]metrics.Counter)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // AddCounters indicates an expected call of AddCounters.
@@ -139,11 +140,12 @@ func (mr *MockRepositoryMockRecorder) SetGauge(arg0, arg1, arg2 interface{}) *go
 }
 
 // SetGauges mocks base method.
-func (m *MockRepository) SetGauges(arg0 context.Context, arg1 []metrics.Gauge) error {
+func (m *MockRepository) SetGauges(arg0 context.Context, arg1 []metrics.Gauge) ([]metrics.Gauge, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SetGauges", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].([]metrics.Gauge)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // SetGauges indicates an expected call of SetGauges.

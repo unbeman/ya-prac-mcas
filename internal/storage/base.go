@@ -12,11 +12,11 @@ var ErrNotFound = errors.New("not found")
 
 type Repository interface {
 	AddCounter(ctx context.Context, name string, delta int64) (metrics.Counter, error)
-	AddCounters(ctx context.Context, slice []metrics.Counter) error
+	AddCounters(ctx context.Context, slice []metrics.Counter) ([]metrics.Counter, error)
 	GetCounter(ctx context.Context, name string) (metrics.Counter, error)
 
 	SetGauge(ctx context.Context, name string, value float64) (metrics.Gauge, error)
-	SetGauges(ctx context.Context, slice []metrics.Gauge) error
+	SetGauges(ctx context.Context, slice []metrics.Gauge) ([]metrics.Gauge, error)
 	GetGauge(ctx context.Context, name string) (metrics.Gauge, error)
 
 	GetAll(ctx context.Context) ([]metrics.Metric, error)
