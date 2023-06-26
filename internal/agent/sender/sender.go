@@ -18,6 +18,8 @@ import (
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 )
 
+const defaultRate = 1 * time.Second
+
 type Sender interface {
 	SendMetric(ctx context.Context, mp metrics.Params)
 	SendJSONMetrics(ctx context.Context, slice []metrics.Params)
@@ -33,7 +35,7 @@ type httpSender struct {
 
 func NewHTTPSender(cfg configs.HttConnectionConfig) *httpSender {
 	client := http.Client{Timeout: cfg.ClientTimeout}
-	rl := rate.NewLimiter(rate.Every(1*time.Second), cfg.RateLimit) //не больше rateLimit запросов в секунду
+	rl := rate.NewLimiter(rate.Every(defaultRate), cfg.RateTokensCount) //не больше RateTokensCount запросов в секунду
 	return &httpSender{
 		client:      client,
 		address:     cfg.Address,
