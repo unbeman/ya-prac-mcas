@@ -31,7 +31,6 @@ func NewCollectorHandler(repository storage.Repository, key string) *CollectorHa
 	}
 	ch.Use(middleware.RequestID)
 	ch.Use(middleware.RealIP)
-	//ch.Use(middleware.Logger)
 	ch.Use(logger.Logger("router", log.New()))
 	ch.Use(middleware.Recoverer)
 	ch.Use(GZipMiddleware)
@@ -83,7 +82,6 @@ func (ch *CollectorHandler) GetMetricHandler(writer http.ResponseWriter, request
 		return
 	}
 	writer.WriteHeader(http.StatusOK)
-
 }
 
 func (ch *CollectorHandler) GetMetricsHandler(writer http.ResponseWriter, request *http.Request) {
@@ -110,7 +108,6 @@ func (ch *CollectorHandler) GetMetricsHandler(writer http.ResponseWriter, reques
 		return
 	}
 	writer.WriteHeader(http.StatusOK)
-
 }
 
 func (ch *CollectorHandler) UpdateMetricHandler(writer http.ResponseWriter, request *http.Request) {
@@ -134,9 +131,7 @@ func (ch *CollectorHandler) UpdateMetricHandler(writer http.ResponseWriter, requ
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	writer.WriteHeader(http.StatusOK)
-
 }
 
 func (ch *CollectorHandler) GetJSONMetricHandler(writer http.ResponseWriter, request *http.Request) {
@@ -260,7 +255,17 @@ func (ch *CollectorHandler) UpdateJSONMetricsHandler(writer http.ResponseWriter,
 		log.Errorf("Write failed, %v\n", err)
 		return
 	}
+	writer.WriteHeader(http.StatusOK)
+}
 
+func (ch *CollectorHandler) PingHandler(writer http.ResponseWriter, request *http.Request) {
+	writer.Header().Set("Content-Type", "text/plain")
+
+	err := ch.Repository.Ping()
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	writer.WriteHeader(http.StatusOK)
 }
 
@@ -330,17 +335,6 @@ func (ch *CollectorHandler) getHash(metric metrics.Metric) string {
 
 func (ch *CollectorHandler) isKeySet() bool {
 	return len(ch.HashKey) > 0
-}
-
-func (ch *CollectorHandler) PingHandler(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Set("Content-Type", "text/plain")
-
-	err := ch.Repository.Ping()
-	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	writer.WriteHeader(http.StatusOK)
 }
 
 func isHashSet(hash string) bool {
