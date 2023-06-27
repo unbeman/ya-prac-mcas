@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"math/rand"
 	"reflect"
 	"strings"
 	"testing"
@@ -162,6 +163,33 @@ func TestParamsSlice_ParseJSON(t *testing.T) {
 			}
 		})
 	}
+}
+
+func BenchmarkParamsSlice_ParseJSON(b *testing.B) {
+	var getCounterValue func(int64) *int64
+	getCounterValue = func(i int64) *int64 {
+		return &i
+	}
+	var getGaugeValue func(float64) *float64
+	getGaugeValue = func(i float64) *float64 {
+		return &i
+	}
+	b.Run("good parse", func(b *testing.B) { //todo: randomize
+		for i := 0; i < b.N; i++ {
+			b.StopTimer()
+			example := ParamsSlice{
+				Params{Name: "Dog", Type: CounterType, ValueCounter: getCounterValue(rand.Int63())},
+				Params{Name: "Cat", Type: CounterType, ValueCounter: getCounterValue(rand.Int63())},
+				Params{Name: "Ant", Type: CounterType, ValueCounter: getCounterValue(rand.Int63())},
+				Params{Name: "WaterPercent", Type: GaugeType, ValueGauge: getGaugeValue(rand.Float64())},
+				Params{Name: "FoodPercent", Type: GaugeType, ValueGauge: getGaugeValue(rand.Float64())},
+			}
+			js, _ := json.Marshal(example)
+			p := ParamsSlice{}
+			b.StartTimer()
+			p.ParseJSON(bytes.NewReader(js))
+		}
+	})
 }
 
 func TestParseJSON(t *testing.T) {

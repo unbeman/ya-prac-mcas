@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/unbeman/ya-prac-mcas/configs"
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 	"github.com/unbeman/ya-prac-mcas/internal/storage"
 	mock_storage "github.com/unbeman/ya-prac-mcas/internal/storage/mock"
@@ -901,4 +902,96 @@ func TestPingHandler(t *testing.T) {
 
 func newPingTestRequest() *http.Request {
 	return httptest.NewRequest(http.MethodGet, "/ping", nil)
+}
+
+func newBenchmarkHandler(repo storage.Repository) *CollectorHandler {
+	ramRepo := storage.NewRAMRepository()
+	ch := NewCollectorHandler(ramRepo, "")
+	return ch
+}
+
+func BenchmarkUpdateHandlers(b *testing.B) {
+	ramRepo := storage.NewRAMRepository()
+	handlerWithRAM := newBenchmarkHandler(ramRepo)
+
+	pgRepo, _ := storage.NewPostgresRepository(configs.PostgresConfig{
+		DSN:          "postgresql://postgres:1211@localhost:5432/mcas",
+		MigrationDir: configs.PGMigrationDirDefault},
+	)
+	handlerWithPG := newBenchmarkHandler(pgRepo)
+	b.Run("RAM UpdateJSONMetricsHandler", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			b.StopTimer()
+			request := newUpdatesMetricsJSONTestRequest(metrics.ParamsSlice{
+				newGaugeParams("WaterPercentage", 0.35, ""),
+				newGaugeParams("FoodPercentage", 0.8, ""),
+				newCounterParams("DogsCount", 10, ""),
+				newCounterParams("CatsCount", 3, ""),
+			})
+			w := httptest.NewRecorder()
+			b.StartTimer()
+
+			handlerWithRAM.UpdateJSONMetricsHandler(w, request)
+		}
+	})
+
+	b.Run("PG UpdateJSONMetricsHandler", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			b.StopTimer()
+			request := newUpdatesMetricsJSONTestRequest(metrics.ParamsSlice{
+				newGaugeParams("WaterPercentage", 0.35, ""),
+				newGaugeParams("FoodPercentage", 0.8, ""),
+				newCounterParams("DogsCount", 10, ""),
+				newCounterParams("CatsCount", 3, ""),
+			})
+			w := httptest.NewRecorder()
+			b.StartTimer()
+
+			handlerWithPG.UpdateJSONMetricsHandler(w, request)
+		}
+	})
+
+	b.Run("RAM UpdateJSONMetricHandler", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			b.StopTimer()
+			request := newUpdateMetricJSONTestRequest(newGaugeParams("WaterPercentage", 0.35, ""))
+			w := httptest.NewRecorder()
+			b.StartTimer()
+
+			handlerWithRAM.UpdateJSONMetricHandler(w, request)
+		}
+	})
+
+	b.Run("PG UpdateJSONMetricHandler", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			b.StopTimer()
+			request := newUpdateMetricJSONTestRequest(newGaugeParams("WaterPercentage", 0.35, ""))
+			w := httptest.NewRecorder()
+			b.StartTimer()
+
+			handlerWithPG.UpdateJSONMetricHandler(w, request)
+		}
+	})
+
+	b.Run("RAM UpdateMetricHandler", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			b.StopTimer()
+			request := newUpdateMetricTestRequest("gauge", "WaterPercentage", "0.35")
+			w := httptest.NewRecorder()
+			b.StartTimer()
+
+			handlerWithRAM.UpdateJSONMetricHandler(w, request)
+		}
+	})
+
+	b.Run("PG UpdateMetricHandler", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			b.StopTimer()
+			request := newUpdateMetricTestRequest("gauge", "WaterPercentage", "0.35")
+			w := httptest.NewRecorder()
+			b.StartTimer()
+
+			handlerWithPG.UpdateJSONMetricHandler(w, request)
+		}
+	})
 }
