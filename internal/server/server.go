@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	_ "net/http/pprof"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -14,19 +15,20 @@ import (
 )
 
 type serverCollector struct {
-	repository storage.Repository
-	httpServer http.Server
+	repository    storage.Repository
+	httpServer    *http.Server
+	profileServer *http.Server
 }
 
 func (s *serverCollector) Run() {
 	wg := sync.WaitGroup{}
-	wg.Add(1)
 
 	// run http server
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		err := s.httpServer.ListenAndServe()
-		log.Infoln("serverCollector.Run()", err)
+		log.Infoln("collector server stopped ", err)
 	}()
 
 	// run backup ticker
@@ -39,7 +41,14 @@ func (s *serverCollector) Run() {
 		}()
 	}
 
-	log.Infoln("Server collector started, addr:", s.httpServer.Addr)
+	wg.Add(1)
+	go func(server *http.Server) {
+		defer wg.Done()
+		err := server.ListenAndServe()
+		log.Infoln("profile server stopped:", err)
+	}(s.profileServer)
+
+	log.Infoln("Application started, addr:", s.httpServer.Addr)
 
 	wg.Wait()
 
@@ -50,12 +59,17 @@ func (s *serverCollector) Run() {
 		}
 	}
 
-	log.Infoln("Server collector stopped, addr:", s.httpServer.Addr)
+	log.Infoln("Application stopped, addr:", s.httpServer.Addr)
 }
 
 func (s *serverCollector) Shutdown() {
 	log.Infoln("Shutting down")
 	err := s.httpServer.Shutdown(context.TODO())
+	if err != nil {
+		log.Errorln(err)
+	}
+
+	err = s.profileServer.Shutdown(context.TODO())
 	if err != nil {
 		log.Errorln(err)
 	}
@@ -73,8 +87,10 @@ func NewServerCollector(cfg configs.ServerConfig) (*serverCollector, error) {
 	}
 
 	handler := handlers.NewCollectorHandler(repository, cfg.Key)
+
 	return &serverCollector{
-		httpServer: http.Server{Addr: cfg.Address, Handler: handler},
-		repository: repository,
+		httpServer:    &http.Server{Addr: cfg.CollectorAddress, Handler: handler},
+		profileServer: &http.Server{Addr: cfg.ProfileAddress},
+		repository:    repository,
 	}, nil
 }

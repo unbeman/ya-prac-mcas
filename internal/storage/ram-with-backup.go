@@ -49,7 +49,7 @@ func NewRAMBackupRepository(cfg *configs.BackupConfig) (*BackupRepository, error
 }
 
 func (br *BackupRepository) Backup() error {
-	log.Debugln("Saving to", br.filename)
+	log.Debug("Saving to", br.filename)
 	file, err := os.OpenFile(br.filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0664)
 	if err != nil {
 		return fmt.Errorf("BackupRepository.Backup(): can't open file %v - %w", br.filename, err)
@@ -76,7 +76,7 @@ func (br *BackupRepository) Backup() error {
 	if err != nil {
 		return fmt.Errorf("BackupRepository.Backup(): %w", err)
 	}
-	log.Infoln("Metrics saved")
+	log.Info("Metrics saved")
 	return nil
 }
 
@@ -90,7 +90,7 @@ func (br *BackupRepository) Restore() error {
 	var jsonMetricsL []*metrics.Params
 	err = reader.Decode(&jsonMetricsL)
 	if errors.Is(err, io.EOF) {
-		log.Infoln("No json metrics to load")
+		log.Info("No json metrics to load")
 		return nil
 	}
 	if err != nil { //TODO
@@ -109,7 +109,7 @@ func (br *BackupRepository) Restore() error {
 		}
 
 	}
-	log.Infoln("Metrics loaded")
+	log.Info("Metrics loaded")
 	return nil
 }
 
@@ -126,7 +126,7 @@ func (br *BackupRepository) Run() {
 		select {
 		case <-br.closing:
 			ticker.Stop()
-			log.Infoln("Backup ticker stopped")
+			log.Info("Backup ticker stopped")
 			return
 		case <-ticker.C:
 			if err := br.Backup(); err != nil {
@@ -137,12 +137,9 @@ func (br *BackupRepository) Run() {
 }
 
 func (br *BackupRepository) Shutdown() error {
-	log.Infoln("Stop backup ticker")
+	log.Info("Stop backup ticker")
 	if br.isTickerEnable() {
 		br.closing <- struct{}{}
-	}
-	if err := br.Backup(); err != nil {
-		log.Error(err)
 	}
 	return nil
 }

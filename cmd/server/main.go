@@ -38,8 +38,8 @@ func main() {
 
 		sig := <-exit
 		log.Infof("Got signal '%v'", sig)
-		collectorServer.Shutdown()
 
+		collectorServer.Shutdown()
 	}()
 
 	collectorServer.Run()

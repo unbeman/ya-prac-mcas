@@ -130,37 +130,53 @@ func (p *postgresRepository) GetAll(ctx context.Context) ([]metrics.Metric, erro
 	return metricSlice, nil
 }
 
-func (p *postgresRepository) AddCounters(ctx context.Context, slice []metrics.Counter) error {
+func (p *postgresRepository) AddCounters(ctx context.Context, slice []metrics.Counter) ([]metrics.Counter, error) {
 	transaction, err := p.connection.Begin()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer transaction.Rollback()
 
 	stmt := transaction.StmtContext(ctx, p.statements.AddCounter)
-	for _, counter := range slice {
-		_, err := stmt.ExecContext(ctx, counter.GetName(), counter.Value())
-		if err != nil {
-			return err
+	for idx, counter := range slice {
+		result := stmt.QueryRowContext(ctx, counter.GetName(), counter.Value())
+		if result.Err() != nil {
+			return nil, err
 		}
+
+		var updatedValue int64
+		err = result.Scan(&updatedValue)
+		if err != nil {
+			return nil, err
+		}
+
+		slice[idx].Set(updatedValue)
 	}
-	return transaction.Commit()
+	err = transaction.Commit()
+	if err != nil {
+		return nil, err
+	}
+	return slice, nil
 }
 
-func (p *postgresRepository) SetGauges(ctx context.Context, slice []metrics.Gauge) error {
+func (p *postgresRepository) SetGauges(ctx context.Context, slice []metrics.Gauge) ([]metrics.Gauge, error) {
 	transaction, err := p.connection.Begin()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer transaction.Rollback()
 	stmt := transaction.StmtContext(ctx, p.statements.SetGauge)
 	for _, gauge := range slice {
 		_, err := stmt.ExecContext(ctx, gauge.GetName(), gauge.Value())
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
-	return transaction.Commit()
+	err = transaction.Commit()
+	if err != nil {
+		return nil, err
+	}
+	return slice, nil
 }
 
 func (p *postgresRepository) Ping() error {

@@ -59,9 +59,6 @@ func ParseURI(request *http.Request, requiredKeys ...string) (Params, error) {
 	params := Params{}
 	for _, key := range requiredKeys {
 		value := chi.URLParam(request, key)
-		//if len(value) == 0 {
-		//	return nil, fmt.Errorf("ParseURI: %v is %w", key, ErrInvalidValue)
-		//}
 		switch key {
 		case PType:
 			err := CheckType(value)
