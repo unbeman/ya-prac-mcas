@@ -29,175 +29,209 @@ func NewCollectorHandler(repository storage.Repository, key string) *CollectorHa
 		Repository: repository,
 		HashKey:    []byte(key),
 	}
+
 	ch.Use(middleware.RequestID)
 	ch.Use(middleware.RealIP)
-	//ch.Use(middleware.Logger)
 	ch.Use(logger.Logger("router", log.New()))
 	ch.Use(middleware.Recoverer)
 	ch.Use(GZipMiddleware)
+	ch.Mount("/debug", middleware.Profiler()) //todo поднять отдельный хттп сервер для профилировщика в горутине
 	ch.Route("/", func(router chi.Router) {
-		router.Get("/", ch.GetMetricsHandler())
+		router.Get("/", ch.GetMetricsHandler)
 		router.Route("/update", func(r chi.Router) {
-			r.Post("/{type}/{name}/{value}", ch.UpdateMetricHandler())
-			r.Post("/", ch.UpdateJSONMetricHandler())
+			r.Post("/{type}/{name}/{value}", ch.UpdateMetricHandler)
+			r.Post("/", ch.UpdateJSONMetricHandler)
 		})
-		router.Post("/updates/", ch.UpdateJSONMetricsHandler())
+		router.Post("/updates/", ch.UpdateJSONMetricsHandler)
 		router.Route("/value", func(r chi.Router) {
-			r.Get("/{type}/{name}", ch.GetMetricHandler())
-			r.Post("/", ch.GetJSONMetricHandler())
+			r.Get("/{type}/{name}", ch.GetMetricHandler)
+			r.Post("/", ch.GetJSONMetricHandler)
 		})
-		router.Get("/ping", ch.PingHandler())
+		router.Get("/ping", ch.PingHandler)
 	})
 	return ch
 }
 
-func (ch *CollectorHandler) GetMetricHandler() http.HandlerFunc {
-	return func(writer http.ResponseWriter, request *http.Request) {
-		writer.Header().Set("Content-Type", "text/plain")
-		params, err := metrics.ParseURI(request, metrics.PType, metrics.PName)
-		if errors.Is(err, metrics.ErrInvalidType) {
-			http.Error(writer, err.Error(), http.StatusNotImplemented)
-			return
-		}
-		if errors.Is(err, metrics.ErrInvalidValue) {
-			http.Error(writer, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if err != nil {
-			http.Error(writer, err.Error(), http.StatusMethodNotAllowed)
-			return
-		}
-
-		metric, err := ch.getMetric(request.Context(), params)
-		if errors.Is(err, storage.ErrNotFound) {
-			http.Error(writer, "metric not found", http.StatusNotFound)
-			return
-		}
-		if err != nil {
-			http.Error(writer, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		_, err = writer.Write([]byte(metric.GetValue()))
-		if err != nil {
-			log.Errorf("Write failed, %v", err)
-			return
-		}
-		writer.WriteHeader(http.StatusOK)
+func (ch *CollectorHandler) GetMetricHandler(writer http.ResponseWriter, request *http.Request) {
+	writer.Header().Set("Content-Type", "text/plain")
+	params, err := metrics.ParseURI(request, metrics.PType, metrics.PName)
+	if errors.Is(err, metrics.ErrInvalidType) {
+		http.Error(writer, err.Error(), http.StatusNotImplemented)
+		return
 	}
+	if errors.Is(err, metrics.ErrInvalidValue) {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusMethodNotAllowed)
+		return
+	}
+
+	metric, err := ch.getMetric(request.Context(), params)
+	if errors.Is(err, storage.ErrNotFound) {
+		http.Error(writer, "metric not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	_, err = writer.Write([]byte(metric.GetValue()))
+	if err != nil {
+		log.Errorf("Write failed, %v", err)
+		return
+	}
+	writer.WriteHeader(http.StatusOK)
 }
 
-func (ch *CollectorHandler) GetMetricsHandler() http.HandlerFunc {
-	return func(writer http.ResponseWriter, request *http.Request) {
-		writer.Header().Set("Content-Type", "text/html; charset=UTF-8")
+func (ch *CollectorHandler) GetMetricsHandler(writer http.ResponseWriter, request *http.Request) {
+	writer.Header().Set("Content-Type", "text/html; charset=UTF-8")
 
-		var b strings.Builder
+	var b strings.Builder
 
-		metricSlice, err := ch.Repository.GetAll(request.Context())
-		if err != nil {
-			http.Error(writer, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		for _, metric := range metricSlice {
-			_, err := fmt.Fprintf(&b, "%v: %v\n", metric.GetName(), metric.GetValue())
-			if err != nil {
-				log.Errorf("GetMetricsHandler: can't build metrics list with values %v %v, reason: %v",
-					metric.GetName(), metric.GetValue(), err)
-			}
-		}
-		_, err = writer.Write([]byte(b.String()))
-		if err != nil {
-			log.Errorf("Write failed, %v", err)
-			return
-		}
-		writer.WriteHeader(http.StatusOK)
+	metricSlice, err := ch.Repository.GetAll(request.Context())
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
 	}
+
+	for _, metric := range metricSlice {
+		_, err := fmt.Fprintf(&b, "%v: %v\n", metric.GetName(), metric.GetValue())
+		if err != nil {
+			log.Errorf("GetMetricsHandler: can't build metrics list with values %v %v, reason: %v",
+				metric.GetName(), metric.GetValue(), err)
+		}
+	}
+	_, err = writer.Write([]byte(b.String()))
+	if err != nil {
+		log.Errorf("Write failed, %v", err)
+		return
+	}
+	writer.WriteHeader(http.StatusOK)
 }
 
-func (ch *CollectorHandler) UpdateMetricHandler() http.HandlerFunc {
-	return func(writer http.ResponseWriter, request *http.Request) {
-		writer.Header().Set("Content-Type", "text/plain")
-		params, err := metrics.ParseURI(request, metrics.PType, metrics.PName, metrics.PValue)
-		if errors.Is(err, metrics.ErrInvalidType) {
-			http.Error(writer, err.Error(), http.StatusNotImplemented)
-			return
-		}
-		if errors.Is(err, metrics.ErrInvalidValue) {
-			http.Error(writer, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if err != nil {
-			http.Error(writer, err.Error(), http.StatusMethodNotAllowed)
-			return
-		}
-
-		_, err = ch.updateMetric(request.Context(), params)
-		if err != nil {
-			http.Error(writer, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		writer.WriteHeader(http.StatusOK)
+func (ch *CollectorHandler) UpdateMetricHandler(writer http.ResponseWriter, request *http.Request) {
+	writer.Header().Set("Content-Type", "text/plain")
+	params, err := metrics.ParseURI(request, metrics.PType, metrics.PName, metrics.PValue)
+	if errors.Is(err, metrics.ErrInvalidType) {
+		http.Error(writer, err.Error(), http.StatusNotImplemented)
+		return
 	}
+	if errors.Is(err, metrics.ErrInvalidValue) {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusMethodNotAllowed)
+		return
+	}
+
+	_, err = ch.updateMetric(request.Context(), params)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writer.WriteHeader(http.StatusOK)
 }
 
-func (ch *CollectorHandler) GetJSONMetricHandler() http.HandlerFunc {
-	return func(writer http.ResponseWriter, request *http.Request) {
-		writer.Header().Set("Content-Type", "application/json")
+func (ch *CollectorHandler) GetJSONMetricHandler(writer http.ResponseWriter, request *http.Request) {
+	writer.Header().Set("Content-Type", "application/json")
 
-		params, err := metrics.ParseJSON(request.Body, metrics.PName, metrics.PType)
-		if errors.Is(err, metrics.ErrInvalidType) {
-			http.Error(writer, err.Error(), http.StatusNotImplemented)
-			return
-		}
-		if errors.Is(err, metrics.ErrInvalidValue) {
-			http.Error(writer, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if err != nil {
-			http.Error(writer, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		metric, err := ch.getMetric(request.Context(), params)
-		if errors.Is(err, storage.ErrNotFound) {
-			http.Error(writer, "metric not found", http.StatusNotFound)
-			return
-		}
-		if err != nil {
-			http.Error(writer, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		params = metric.ToParams()
-		params.Hash = ch.getHash(metric)
-		if err := json.NewEncoder(writer).Encode(params); err != nil {
-			log.Errorf("Write failed, %v", err)
-			return
-		}
-		writer.WriteHeader(http.StatusOK)
+	params, err := metrics.ParseJSON(request.Body, metrics.PName, metrics.PType)
+	if errors.Is(err, metrics.ErrInvalidType) {
+		http.Error(writer, err.Error(), http.StatusNotImplemented)
+		return
 	}
+	if errors.Is(err, metrics.ErrInvalidValue) {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	metric, err := ch.getMetric(request.Context(), params)
+	if errors.Is(err, storage.ErrNotFound) {
+		http.Error(writer, "metric not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	params = metric.ToParams()
+	params.Hash = ch.getHash(metric)
+	if err := json.NewEncoder(writer).Encode(params); err != nil {
+		log.Errorf("Write failed, %v", err)
+		return
+	}
+	writer.WriteHeader(http.StatusOK)
 }
 
-func (ch *CollectorHandler) UpdateJSONMetricHandler() http.HandlerFunc {
-	return func(writer http.ResponseWriter, request *http.Request) {
-		writer.Header().Set("Content-Type", "application/json")
+func (ch *CollectorHandler) UpdateJSONMetricHandler(writer http.ResponseWriter, request *http.Request) {
+	writer.Header().Set("Content-Type", "application/json")
 
-		params, err := metrics.ParseJSON(request.Body, metrics.PName, metrics.PType, metrics.PValue)
-		if errors.Is(err, metrics.ErrInvalidType) {
-			http.Error(writer, err.Error(), http.StatusNotImplemented)
-			return
-		}
-		if errors.Is(err, metrics.ErrInvalidValue) {
-			http.Error(writer, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if err != nil {
-			http.Error(writer, err.Error(), http.StatusBadRequest)
-			return
-		}
+	params, err := metrics.ParseJSON(request.Body, metrics.PName, metrics.PType, metrics.PValue)
+	if errors.Is(err, metrics.ErrInvalidType) {
+		http.Error(writer, err.Error(), http.StatusNotImplemented)
+		return
+	}
+	if errors.Is(err, metrics.ErrInvalidValue) {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
 
+	metric := metrics.NewMetricFromParams(params)
+
+	if !ch.isValidHash(params.Hash, metric) {
+		http.Error(writer, "invalid hash", http.StatusBadRequest)
+		return
+	}
+
+	metric, err = ch.updateMetric(request.Context(), params)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	params = metric.ToParams()
+	params.Hash = ch.getHash(metric)
+	if err := json.NewEncoder(writer).Encode(&params); err != nil {
+		log.Errorf("Write failed, %v\n", err)
+		return
+	}
+	writer.WriteHeader(http.StatusOK)
+}
+
+func (ch *CollectorHandler) UpdateJSONMetricsHandler(writer http.ResponseWriter, request *http.Request) {
+	writer.Header().Set("Content-Type", "application/json")
+
+	paramsSlice := metrics.ParamsSlice{}
+	err := paramsSlice.ParseJSON(request.Body)
+
+	if errors.Is(err, metrics.ErrInvalidType) {
+		http.Error(writer, err.Error(), http.StatusNotImplemented)
+		return
+	}
+	if errors.Is(err, metrics.ErrInvalidValue) {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	gauges := make([]metrics.Gauge, 0)
+	counters := make([]metrics.Counter, 0)
+	for _, params := range paramsSlice {
 		metric := metrics.NewMetricFromParams(params)
 
 		if !ch.isValidHash(params.Hash, metric) {
@@ -205,72 +239,36 @@ func (ch *CollectorHandler) UpdateJSONMetricHandler() http.HandlerFunc {
 			return
 		}
 
-		metric, err = ch.updateMetric(request.Context(), params)
-		if err != nil {
-			http.Error(writer, err.Error(), http.StatusInternalServerError)
-			return
+		switch metric.GetType() {
+		case metrics.GaugeType:
+			gauges = append(gauges, metric.(metrics.Gauge))
+		case metrics.CounterType:
+			counters = append(counters, metric.(metrics.Counter))
 		}
-		params = metric.ToParams()
-		params.Hash = ch.getHash(metric)
-		if err := json.NewEncoder(writer).Encode(&params); err != nil {
-			log.Errorf("Write failed, %v\n", err)
-			return
-		}
-		writer.WriteHeader(http.StatusOK)
 	}
+
+	metricsParams, err := ch.updateMetrics(request.Context(), gauges, counters)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := json.NewEncoder(writer).Encode(&metricsParams); err != nil {
+		log.Errorf("Write failed, %v\n", err)
+		return
+	}
+	writer.WriteHeader(http.StatusOK)
 }
 
-func (ch *CollectorHandler) UpdateJSONMetricsHandler() http.HandlerFunc {
-	return func(writer http.ResponseWriter, request *http.Request) {
-		writer.Header().Set("Content-Type", "application/json")
+func (ch *CollectorHandler) PingHandler(writer http.ResponseWriter, request *http.Request) {
+	writer.Header().Set("Content-Type", "text/plain")
 
-		paramsSlice := metrics.ParamsSlice{}
-		err := paramsSlice.ParseJSON(request.Body)
-
-		if errors.Is(err, metrics.ErrInvalidType) {
-			http.Error(writer, err.Error(), http.StatusNotImplemented)
-			return
-		}
-		if errors.Is(err, metrics.ErrInvalidValue) {
-			http.Error(writer, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if err != nil {
-			http.Error(writer, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		gauges := make([]metrics.Gauge, 0)
-		counters := make([]metrics.Counter, 0)
-		for _, params := range paramsSlice {
-			metric := metrics.NewMetricFromParams(params)
-
-			if !ch.isValidHash(params.Hash, metric) {
-				http.Error(writer, "invalid hash", http.StatusBadRequest)
-				return
-			}
-
-			switch metric.GetType() {
-			case metrics.GaugeType:
-				gauges = append(gauges, metric.(metrics.Gauge))
-			case metrics.CounterType:
-				counters = append(counters, metric.(metrics.Counter))
-			}
-		}
-
-		err = ch.updateMetrics(request.Context(), gauges, counters)
-		if err != nil {
-			http.Error(writer, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		if err := json.NewEncoder(writer).Encode(&paramsSlice); err != nil {
-			log.Errorf("Write failed, %v\n", err)
-			return
-		}
-
-		writer.WriteHeader(http.StatusOK)
+	err := ch.Repository.Ping()
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
 	}
+	writer.WriteHeader(http.StatusOK)
 }
 
 func (ch *CollectorHandler) getMetric(ctx context.Context, params metrics.Params) (metrics.Metric, error) { //TODO: controller layer
@@ -302,21 +300,37 @@ func (ch *CollectorHandler) updateMetric(ctx context.Context, params metrics.Par
 	return metric, err
 }
 
-func (ch *CollectorHandler) updateMetrics(ctx context.Context, gauges []metrics.Gauge, counters []metrics.Counter) error { //TODO: controller layer
-	var err error
+func (ch *CollectorHandler) updateMetrics(
+	ctx context.Context,
+	gauges []metrics.Gauge,
+	counters []metrics.Counter) (metrics.ParamsSlice, error) { //TODO: controller layer
+	metricsParams := make(metrics.ParamsSlice, 0, len(gauges)+len(counters))
+
 	if len(gauges) > 0 {
-		err = ch.Repository.SetGauges(ctx, gauges)
+		updatedGauges, err := ch.Repository.SetGauges(ctx, gauges)
 		if err != nil {
-			return err
+			return nil, err
+		}
+
+		for _, gauge := range updatedGauges {
+			gp := gauge.ToParams()
+			metricsParams = append(metricsParams, gp)
 		}
 	}
+
 	if len(counters) > 0 {
-		err = ch.Repository.AddCounters(ctx, counters)
+		updatedCounters, err := ch.Repository.AddCounters(ctx, counters)
 		if err != nil {
-			return err
+			return nil, err
 		}
+
+		for _, counter := range updatedCounters {
+			cp := counter.ToParams()
+			metricsParams = append(metricsParams, cp)
+		}
+
 	}
-	return nil
+	return metricsParams, nil
 }
 
 func (ch *CollectorHandler) isValidHash(hash string, metric metrics.Metric) bool {
@@ -339,19 +353,6 @@ func (ch *CollectorHandler) getHash(metric metrics.Metric) string {
 
 func (ch *CollectorHandler) isKeySet() bool {
 	return len(ch.HashKey) > 0
-}
-
-func (ch *CollectorHandler) PingHandler() http.HandlerFunc {
-	return func(writer http.ResponseWriter, request *http.Request) {
-		writer.Header().Set("Content-Type", "text/plain")
-
-		err := ch.Repository.Ping()
-		if err != nil {
-			http.Error(writer, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		writer.WriteHeader(http.StatusOK)
-	}
 }
 
 func isHashSet(hash string) bool {
