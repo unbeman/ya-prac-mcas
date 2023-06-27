@@ -35,7 +35,6 @@ func NewCollectorHandler(repository storage.Repository, key string) *CollectorHa
 	ch.Use(logger.Logger("router", log.New()))
 	ch.Use(middleware.Recoverer)
 	ch.Use(GZipMiddleware)
-	ch.Mount("/debug", middleware.Profiler()) //todo поднять отдельный хттп сервер для профилировщика в горутине
 	ch.Route("/", func(router chi.Router) {
 		router.Get("/", ch.GetMetricsHandler)
 		router.Route("/update", func(r chi.Router) {

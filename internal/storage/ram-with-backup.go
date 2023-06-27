@@ -141,8 +141,5 @@ func (br *BackupRepository) Shutdown() error {
 	if br.isTickerEnable() {
 		br.closing <- struct{}{}
 	}
-	if err := br.Backup(); err != nil {
-		log.Error(err)
-	}
 	return nil
 }
