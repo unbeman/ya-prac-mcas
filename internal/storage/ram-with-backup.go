@@ -15,6 +15,7 @@ import (
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 )
 
+// Backuper describes interface for saving metrics to file and loading ones to memory.
 type Backuper interface {
 	Restore() error
 	Backup() error
@@ -22,6 +23,7 @@ type Backuper interface {
 	Shutdown() error
 }
 
+// BackupRepository is implementation of Backuper and Repository.
 type BackupRepository struct {
 	Repository
 	filename string
@@ -29,6 +31,7 @@ type BackupRepository struct {
 	closing  chan struct{}
 }
 
+// NewRAMBackupRepository initialize new BackupRepository with config.
 func NewRAMBackupRepository(cfg *configs.BackupConfig) (*BackupRepository, error) {
 	if len(cfg.File) == 0 {
 		return nil, errors.New("no filename")
@@ -48,6 +51,7 @@ func NewRAMBackupRepository(cfg *configs.BackupConfig) (*BackupRepository, error
 	return rb, nil
 }
 
+// Backup saves metrics from memory storage to file.
 func (br *BackupRepository) Backup() error {
 	log.Debug("Saving to", br.filename)
 	file, err := os.OpenFile(br.filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0664)
@@ -80,6 +84,7 @@ func (br *BackupRepository) Backup() error {
 	return nil
 }
 
+// Restore loads metrics from file to memory storage.
 func (br *BackupRepository) Restore() error {
 	file, err := os.OpenFile(br.filename, os.O_RDONLY|os.O_CREATE, 0664)
 	if err != nil {
@@ -113,10 +118,12 @@ func (br *BackupRepository) Restore() error {
 	return nil
 }
 
+// isTickerEnable defines need to turn on ticker.
 func (br *BackupRepository) isTickerEnable() bool {
 	return br.interval != 0*time.Second
 }
 
+// Run makes backup every interval, if interval more than 0 seconds.
 func (br *BackupRepository) Run() {
 	if !br.isTickerEnable() {
 		return
@@ -136,6 +143,7 @@ func (br *BackupRepository) Run() {
 	}
 }
 
+// Shutdown sends signal for stopping interval backup.
 func (br *BackupRepository) Shutdown() error {
 	log.Info("Stop backup ticker")
 	if br.isTickerEnable() {

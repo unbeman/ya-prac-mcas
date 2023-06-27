@@ -1,3 +1,4 @@
+// Package storage has storage interface Repository, and its implementations.
 package storage
 
 import (
@@ -8,8 +9,10 @@ import (
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 )
 
+// ErrNotFound is returned by Repository methods when entity didn't find.
 var ErrNotFound = errors.New("not found")
 
+// Repository describes the storage usage.
 type Repository interface {
 	AddCounter(ctx context.Context, name string, delta int64) (metrics.Counter, error)
 	AddCounters(ctx context.Context, slice []metrics.Counter) ([]metrics.Counter, error)
@@ -25,7 +28,8 @@ type Repository interface {
 	Shutdown() error
 }
 
-func GetRepository(cfg configs.RepositoryConfig) (Repository, error) { //cfg configs.RepositoryConfig
+// GetRepository return Repository implementation depending on the config.
+func GetRepository(cfg configs.RepositoryConfig) (Repository, error) {
 	switch {
 	case cfg.PG != nil:
 		return NewPostgresRepository(*cfg.PG)
