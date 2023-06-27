@@ -166,14 +166,9 @@ func TestParamsSlice_ParseJSON(t *testing.T) {
 }
 
 func BenchmarkParamsSlice_ParseJSON(b *testing.B) {
-	var getCounterValue func(int64) *int64
-	getCounterValue = func(i int64) *int64 {
-		return &i
-	}
-	var getGaugeValue func(float64) *float64
-	getGaugeValue = func(i float64) *float64 {
-		return &i
-	}
+	getCounterValue := func(i int64) *int64 { return &i }
+	getGaugeValue := func(i float64) *float64 { return &i }
+
 	b.Run("good parse", func(b *testing.B) { //todo: randomize
 		for i := 0; i < b.N; i++ {
 			b.StopTimer()
