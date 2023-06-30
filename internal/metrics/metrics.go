@@ -74,6 +74,7 @@ type Counter interface {
 	Inc()
 	Add(value int64)
 	Value() int64
+	Set(value int64)
 }
 
 type counter struct {
@@ -91,6 +92,10 @@ func (c *counter) Inc() {
 
 func (c *counter) Add(value int64) {
 	*c.value += value
+}
+
+func (c *counter) Set(value int64) {
+	*c.value = value
 }
 
 func (c *counter) GetName() string {

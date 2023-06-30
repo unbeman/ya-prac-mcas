@@ -10,6 +10,7 @@ import (
 )
 
 const (
+	ProfileAddressDefault = "127.0.0.1:8888"
 	BackupIntervalDefault = 300 * time.Second
 	BackupFileDefault     = "/tmp/devops-metrics-db.json"
 	RestoreDefault        = true
@@ -56,10 +57,11 @@ func newBackupConfig() *BackupConfig {
 }
 
 type ServerConfig struct {
-	Address    string `env:"ADDRESS"`
-	Key        string `env:"KEY"`
-	Logger     LoggerConfig
-	Repository RepositoryConfig
+	CollectorAddress string `env:"ADDRESS"`
+	Key              string `env:"KEY"`
+	Logger           LoggerConfig
+	Repository       RepositoryConfig
+	ProfileAddress   string
 }
 
 func FromEnv() ServerOption {
@@ -80,7 +82,7 @@ func FromFlags() ServerOption {
 		logLevel := flag.String("l", LogLevelDefault, "log level, allowed [info, debug]")
 		dsn := flag.String("d", DSNDefault, "Postgres data source name")
 		flag.Parse()
-		cfg.Address = *address
+		cfg.CollectorAddress = *address
 		cfg.Key = *key
 		cfg.Repository.RAMWithBackup.Restore = *restore
 		cfg.Repository.RAMWithBackup.Interval = *storeInterval
@@ -92,10 +94,11 @@ func FromFlags() ServerOption {
 
 func NewServerConfig(options ...ServerOption) *ServerConfig {
 	cfg := &ServerConfig{
-		Address:    ServerAddressDefault,
-		Key:        KeyDefault,
-		Logger:     newLoggerConfig(),
-		Repository: RepositoryConfig{RAMWithBackup: newBackupConfig(), PG: newPostgresConfig()},
+		CollectorAddress: ServerAddressDefault,
+		ProfileAddress:   ProfileAddressDefault,
+		Key:              KeyDefault,
+		Logger:           newLoggerConfig(),
+		Repository:       RepositoryConfig{RAMWithBackup: newBackupConfig(), PG: newPostgresConfig()},
 	}
 	for _, option := range options {
 		option(cfg)
