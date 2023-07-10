@@ -181,16 +181,10 @@ func TestCollectorHandler_GetMetricsHandler(t *testing.T) {
 		contentType   string
 	}
 
-	type metric struct {
-		name  string
-		value string
-	}
-
 	tests := []struct {
-		name   string
-		metric []metric
-		want   want
-		setup  func(*mock_storage.MockRepository)
+		name  string
+		want  want
+		setup func(*mock_storage.MockRepository)
 	}{
 		{
 			name: "OK",
