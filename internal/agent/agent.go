@@ -1,3 +1,4 @@
+// Package agent describes metric agent application.
 package agent
 
 import (

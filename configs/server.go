@@ -1,3 +1,4 @@
+// Package configs describes applications settings.
 package configs
 
 import (
@@ -9,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Default config settings
 const (
 	ProfileAddressDefault = "127.0.0.1:8888"
 	BackupIntervalDefault = 300 * time.Second

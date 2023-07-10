@@ -1,3 +1,4 @@
+// Package sender describes connection with metrics server.
 package sender
 
 import (
@@ -35,7 +36,7 @@ type httpSender struct {
 
 func NewHTTPSender(cfg configs.HttConnectionConfig) *httpSender {
 	client := http.Client{Timeout: cfg.ClientTimeout}
-	rl := rate.NewLimiter(rate.Every(defaultRate), cfg.RateTokensCount) // не больше RateTokensCount запросов в секунду
+	rl := rate.NewLimiter(rate.Every(defaultRate), cfg.RateTokensCount) // не больше RateTokensCount запросов в секунду.
 	return &httpSender{
 		client:      client,
 		address:     cfg.Address,

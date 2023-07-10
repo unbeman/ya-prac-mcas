@@ -1,3 +1,4 @@
+// Package server describes metric server application.
 package server
 
 import (

@@ -15,6 +15,10 @@
 // Run with help flag for more details:
 //
 //	staticlint help
+//
+// Run as vet tool:
+//
+//	go vet --vettool=staticlint ./...
 
 package main
 

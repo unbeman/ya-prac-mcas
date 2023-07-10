@@ -1,3 +1,4 @@
+// Package handlers describes server router and handlers methods.
 package handlers
 
 import (
