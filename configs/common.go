@@ -1,5 +1,7 @@
+// Package configs describes applications settings.
 package configs
 
+// Default config settings
 const (
 	ServerAddressDefault = "127.0.0.1:8080"
 	KeyDefault           = ""

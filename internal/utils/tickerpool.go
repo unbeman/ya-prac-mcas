@@ -1,3 +1,4 @@
+// Package utils describes supportive structs and functions.
 package utils
 
 import (
@@ -8,15 +9,18 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// TickerPool describes worker pool that do work once in a given time interval.
 type TickerPool struct {
 	wg   sync.WaitGroup
 	done chan struct{}
 }
 
+// NewTickerPool creates TickerPool instance.
 func NewTickerPool() *TickerPool {
 	return &TickerPool{wg: sync.WaitGroup{}, done: make(chan struct{})}
 }
 
+// AddTask is method for adding new task to worker group and run it with given time interval.
 func (tp *TickerPool) AddTask(ctx context.Context, name string, task func(ctx context.Context), interval time.Duration) {
 	tp.wg.Add(1)
 	go func() {
@@ -35,6 +39,7 @@ func (tp *TickerPool) AddTask(ctx context.Context, name string, task func(ctx co
 	}()
 }
 
+// Wait wait for workers.
 func (tp *TickerPool) Wait() {
 	tp.wg.Wait()
 }

@@ -2,11 +2,8 @@ package handlers
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"github.com/go-chi/chi/v5"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -20,6 +17,7 @@ import (
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 	"github.com/unbeman/ya-prac-mcas/internal/storage"
 	mock_storage "github.com/unbeman/ya-prac-mcas/internal/storage/mock"
+	"github.com/unbeman/ya-prac-mcas/internal/utils"
 )
 
 func TestCollectorHandler_GetMetricHandler(t *testing.T) {
@@ -139,7 +137,7 @@ func TestCollectorHandler_GetMetricHandler(t *testing.T) {
 
 			ch := NewCollectorHandler(mockRepository, "")
 
-			request := newGetMetricTestRequest(tt.metric.mType, tt.metric.name)
+			request := utils.NewGetMetricTestRequest(tt.metric.mType, tt.metric.name)
 
 			w := httptest.NewRecorder()
 			ch.GetMetricHandler(w, request)
@@ -159,18 +157,6 @@ func TestCollectorHandler_GetMetricHandler(t *testing.T) {
 	}
 }
 
-func newGetMetricTestRequest(mType, name string) *http.Request {
-	r := httptest.NewRequest(
-		http.MethodGet,
-		fmt.Sprintf("/values/%v/%v", mType, name),
-		nil,
-	)
-	ctx := chi.NewRouteContext()
-	ctx.URLParams.Add("type", mType)
-	ctx.URLParams.Add("name", name)
-	return r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, ctx))
-}
-
 func TestCollectorHandler_GetMetricsHandler(t *testing.T) {
 	textContentType := "text/plain"
 	htmlContentType := "text/html"
@@ -181,16 +167,10 @@ func TestCollectorHandler_GetMetricsHandler(t *testing.T) {
 		contentType   string
 	}
 
-	type metric struct {
-		name  string
-		value string
-	}
-
 	tests := []struct {
-		name   string
-		metric []metric
-		want   want
-		setup  func(*mock_storage.MockRepository)
+		name  string
+		want  want
+		setup func(*mock_storage.MockRepository)
 	}{
 		{
 			name: "OK",
@@ -366,7 +346,7 @@ func TestCollectorHandler_UpdateMetricHandler(t *testing.T) {
 
 			ch := NewCollectorHandler(mockRepository, "")
 
-			request := newUpdateMetricTestRequest(tt.metric.mType, tt.metric.name, tt.metric.value)
+			request := utils.NewUpdateMetricTestRequest(tt.metric.mType, tt.metric.name, tt.metric.value)
 
 			w := httptest.NewRecorder()
 			ch.UpdateMetricHandler(w, request)
@@ -384,19 +364,6 @@ func TestCollectorHandler_UpdateMetricHandler(t *testing.T) {
 			}
 		})
 	}
-}
-
-func newUpdateMetricTestRequest(mType, name, value string) *http.Request {
-	r := httptest.NewRequest(
-		http.MethodPost,
-		fmt.Sprintf("/update/%v/%v/%v", mType, name, value),
-		nil,
-	)
-	ctx := chi.NewRouteContext()
-	ctx.URLParams.Add("type", mType)
-	ctx.URLParams.Add("name", name)
-	ctx.URLParams.Add("value", value)
-	return r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, ctx))
 }
 
 func TestCollectorHandler_GetJSONMetricHandler(t *testing.T) {
@@ -976,7 +943,7 @@ func BenchmarkUpdateHandlers(b *testing.B) {
 	b.Run("RAM UpdateMetricHandler", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			b.StopTimer()
-			request := newUpdateMetricTestRequest("gauge", "WaterPercentage", "0.35")
+			request := utils.NewUpdateMetricTestRequest("gauge", "WaterPercentage", "0.35")
 			w := httptest.NewRecorder()
 			b.StartTimer()
 
@@ -987,7 +954,7 @@ func BenchmarkUpdateHandlers(b *testing.B) {
 	b.Run("PG UpdateMetricHandler", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			b.StopTimer()
-			request := newUpdateMetricTestRequest("gauge", "WaterPercentage", "0.35")
+			request := utils.NewUpdateMetricTestRequest("gauge", "WaterPercentage", "0.35")
 			w := httptest.NewRecorder()
 			b.StartTimer()
 

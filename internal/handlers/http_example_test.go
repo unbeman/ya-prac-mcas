@@ -8,13 +8,14 @@ import (
 
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 	"github.com/unbeman/ya-prac-mcas/internal/storage"
+	"github.com/unbeman/ya-prac-mcas/internal/utils"
 )
 
 func ExampleCollectorHandler_GetMetricHandler() {
 	ch := NewCollectorHandler(storage.NewRAMRepository(), "")
 	ch.Repository.AddCounter(context.TODO(), "Dog", 10)
 
-	request := newGetMetricTestRequest("counter", "Dog")
+	request := utils.NewGetMetricTestRequest("counter", "Dog")
 	w := httptest.NewRecorder()
 
 	ch.GetMetricHandler(w, request)
@@ -28,8 +29,8 @@ func ExampleCollectorHandler_GetMetricHandler() {
 	fmt.Println(string(value))
 
 	// Output:
-	//200
-	//10
+	// 200
+	// 10
 }
 
 func ExampleCollectorHandler_GetMetricsHandler() {
@@ -51,9 +52,9 @@ func ExampleCollectorHandler_GetMetricsHandler() {
 	fmt.Println(string(value))
 
 	// Output:
-	//200
-	//Dog: 10
-	//WaterPercent: 0.8
+	// 200
+	// Dog: 10
+	// WaterPercent: 0.8
 }
 
 func ExampleCollectorHandler_GetJSONMetricHandler() {
@@ -74,8 +75,8 @@ func ExampleCollectorHandler_GetJSONMetricHandler() {
 	fmt.Println(string(value))
 
 	// Output:
-	//200
-	//{"id":"Dog","type":"counter","delta":10}
+	// 200
+	// {"id":"Dog","type":"counter","delta":10}
 }
 
 func ExampleCollectorHandler_UpdateJSONMetricHandler() {
@@ -100,8 +101,8 @@ func ExampleCollectorHandler_UpdateJSONMetricHandler() {
 	fmt.Println(string(value))
 
 	// Output:
-	//200
-	//{"id":"Dog","type":"counter","delta":15}
+	// 200
+	// {"id":"Dog","type":"counter","delta":15}
 }
 
 func ExampleCollectorHandler_UpdateJSONMetricsHandler() {
@@ -132,15 +133,15 @@ func ExampleCollectorHandler_UpdateJSONMetricsHandler() {
 	fmt.Println(string(value))
 
 	// Output:
-	//200
-	//[{"id":"WaterPercent","type":"gauge","value":0.8},{"id":"Dog","type":"counter","delta":5}]
+	// 200
+	// [{"id":"WaterPercent","type":"gauge","value":0.8},{"id":"Dog","type":"counter","delta":5}]
 }
 
 func ExampleCollectorHandler_UpdateMetricHandler() {
 	ch := NewCollectorHandler(storage.NewRAMRepository(), "")
 	ch.Repository.AddCounter(context.TODO(), "Dog", 10)
 
-	request := newUpdateMetricTestRequest("counter", "Dog", "5")
+	request := utils.NewUpdateMetricTestRequest("counter", "Dog", "5")
 	w := httptest.NewRecorder()
 
 	ch.UpdateMetricHandler(w, request)
@@ -151,5 +152,5 @@ func ExampleCollectorHandler_UpdateMetricHandler() {
 	fmt.Println(result.StatusCode)
 
 	// Output:
-	//200
+	// 200
 }

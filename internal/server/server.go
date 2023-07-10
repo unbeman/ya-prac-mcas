@@ -1,3 +1,4 @@
+// Package server describes metric server application.
 package server
 
 import (
@@ -83,7 +84,7 @@ func (s *serverCollector) Shutdown() {
 func NewServerCollector(cfg configs.ServerConfig) (*serverCollector, error) {
 	repository, err := storage.GetRepository(cfg.Repository)
 	if err != nil {
-		return nil, fmt.Errorf("сan't create repository, reason: %v", err)
+		return nil, fmt.Errorf("сan't create repository, reason: %w", err)
 	}
 
 	handler := handlers.NewCollectorHandler(repository, cfg.Key)

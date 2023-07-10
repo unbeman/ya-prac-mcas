@@ -1,3 +1,4 @@
+// Package sender describes connection with metrics server.
 package sender
 
 import (
@@ -35,7 +36,7 @@ type httpSender struct {
 
 func NewHTTPSender(cfg configs.HttConnectionConfig) *httpSender {
 	client := http.Client{Timeout: cfg.ClientTimeout}
-	rl := rate.NewLimiter(rate.Every(defaultRate), cfg.RateTokensCount) //не больше RateTokensCount запросов в секунду
+	rl := rate.NewLimiter(rate.Every(defaultRate), cfg.RateTokensCount) // не больше RateTokensCount запросов в секунду.
 	return &httpSender{
 		client:      client,
 		address:     cfg.Address,
@@ -53,7 +54,8 @@ func (h *httpSender) SendMetric(ctx context.Context, mp metrics.Params) {
 
 	request, err := http.NewRequestWithContext(ctx2, http.MethodPost, url, nil)
 	if err != nil {
-		log.Fatalln(err)
+		log.Error(err)
+		return
 	}
 	request.Header.Set("Content-Type", "text/plain")
 
@@ -82,13 +84,14 @@ func (h *httpSender) SendJSONMetric(ctx context.Context, mp metrics.Params) {
 
 	buf, err := json.Marshal(mp)
 	if err != nil {
-		log.Fatalf("Json marshal failed, %v\n", err)
+		log.Errorf("Json marshal failed, %v\n", err)
 		return
 	}
 
 	request, err := http.NewRequestWithContext(ctx2, http.MethodPost, url, bytes.NewBuffer(buf))
 	if err != nil {
-		log.Fatalln(err)
+		log.Error(err)
+		return
 	}
 	request.Header.Set("Content-Type", "text/plain")
 

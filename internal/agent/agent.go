@@ -1,3 +1,4 @@
+// Package agent describes metric agent application.
 package agent
 
 import (
@@ -20,7 +21,6 @@ type agentMetrics struct {
 	hashKey        []byte
 	pollInterval   time.Duration
 	reportInterval time.Duration
-	reportTimeout  time.Duration
 }
 
 func NewAgentMetrics(cfg *configs.AgentConfig) *agentMetrics {

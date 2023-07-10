@@ -1,3 +1,4 @@
+// Package configs describes applications settings.
 package configs
 
 import (
@@ -8,6 +9,7 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
+// Default config settings
 const (
 	PollIntervalDefault    = 2 * time.Second
 	ReportIntervalDefault  = 10 * time.Second
