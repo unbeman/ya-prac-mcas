@@ -8,13 +8,14 @@ import (
 
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 	"github.com/unbeman/ya-prac-mcas/internal/storage"
+	"github.com/unbeman/ya-prac-mcas/internal/utils"
 )
 
 func ExampleCollectorHandler_GetMetricHandler() {
 	ch := NewCollectorHandler(storage.NewRAMRepository(), "")
 	ch.Repository.AddCounter(context.TODO(), "Dog", 10)
 
-	request := newGetMetricTestRequest("counter", "Dog")
+	request := utils.NewGetMetricTestRequest("counter", "Dog")
 	w := httptest.NewRecorder()
 
 	ch.GetMetricHandler(w, request)
@@ -140,7 +141,7 @@ func ExampleCollectorHandler_UpdateMetricHandler() {
 	ch := NewCollectorHandler(storage.NewRAMRepository(), "")
 	ch.Repository.AddCounter(context.TODO(), "Dog", 10)
 
-	request := newUpdateMetricTestRequest("counter", "Dog", "5")
+	request := utils.NewUpdateMetricTestRequest("counter", "Dog", "5")
 	w := httptest.NewRecorder()
 
 	ch.UpdateMetricHandler(w, request)
