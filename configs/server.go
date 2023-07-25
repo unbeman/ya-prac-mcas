@@ -2,8 +2,10 @@
 package configs
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/caarlos0/env/v6"
@@ -19,13 +21,14 @@ const (
 	DSNDefault                  = ""
 	PGMigrationDirDefault       = "migrations"
 	PrivateCryptoKeyPathDefault = "private.pem"
+	JSONServerConfigPathDefault = ""
 )
 
 type ServerOption func(config *ServerConfig)
 
 type PostgresConfig struct {
-	DSN          string `env:"DATABASE_DSN"`
-	MigrationDir string `env:"MIGRATION_DIR"`
+	DSN          string `env:"DATABASE_DSN" json:"database_dsn,omitempty"`
+	MigrationDir string `env:"MIGRATION_DIR" json:"migration_dir,omitempty"`
 }
 
 func (cfg *PostgresConfig) String() string {
@@ -43,12 +46,35 @@ type RepositoryConfig struct {
 
 type BackupConfig struct {
 	Interval time.Duration `env:"STORE_INTERVAL"`
-	Restore  bool          `env:"RESTORE"`
-	File     string        `env:"STORE_FILE"`
+	Restore  bool          `env:"RESTORE" json:"restore,omitempty"`
+	File     string        `env:"STORE_FILE" json:"file,omitempty"`
 }
 
 func (cfg *BackupConfig) String() string {
 	return fmt.Sprintf("[Interval: %v; File: %v; Restore: %v;]", cfg.Interval, cfg.File, cfg.Restore)
+}
+
+func (cfg *BackupConfig) UnmarshalJSON(data []byte) error {
+	type RealCfg BackupConfig
+	jCfg := struct {
+		Interval string `json:"store_interval,omitempty"`
+		*RealCfg
+	}{
+		RealCfg: (*RealCfg)(cfg),
+	}
+
+	err := json.Unmarshal(data, &jCfg)
+	if err != nil {
+		return err
+	}
+	if jCfg.Interval != "" {
+		cfg.Interval, err = time.ParseDuration(jCfg.Interval)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func newBackupConfig() *BackupConfig {
@@ -60,12 +86,13 @@ func newBackupConfig() *BackupConfig {
 }
 
 type ServerConfig struct {
-	CollectorAddress     string `env:"ADDRESS"`
-	HashKey              string `env:"KEY"`
-	PrivateCryptoKeyPath string `env:"CRYPTO_KEY"`
+	CollectorAddress     string `env:"ADDRESS" json:"address,omitempty"`
+	HashKey              string `env:"KEY" json:"key,omitempty"`
+	PrivateCryptoKeyPath string `env:"CRYPTO_KEY" json:"crypto_key,omitempty"`
 	Logger               LoggerConfig
 	Repository           RepositoryConfig
-	ProfileAddress       string
+	ProfileAddress       string `json:"profile_address,omitempty"`
+	jsonConfigPath       string
 }
 
 func FromEnv() ServerOption {
@@ -86,6 +113,7 @@ func FromFlags() ServerOption {
 		storeFile := flag.String("f", BackupFileDefault, "json file path to store metrics")
 		logLevel := flag.String("l", LogLevelDefault, "log level, allowed [info, debug]")
 		dsn := flag.String("d", DSNDefault, "Postgres data source name")
+		jsonConfigPath := flag.String("c", cfg.jsonConfigPath, "path to json config")
 		flag.Parse()
 		cfg.CollectorAddress = *address
 		cfg.HashKey = *key
@@ -95,15 +123,54 @@ func FromFlags() ServerOption {
 		cfg.Repository.RAMWithBackup.File = *storeFile
 		cfg.Repository.PG.DSN = *dsn
 		cfg.Logger.Level = *logLevel
+		cfg.jsonConfigPath = *jsonConfigPath
+	}
+}
+
+func FromJSON() ServerOption {
+	return func(cfg *ServerConfig) {
+		envPath, isSet := os.LookupEnv("CONFIG")
+		if isSet {
+			cfg.jsonConfigPath = envPath
+		}
+		if cfg.jsonConfigPath == "" {
+			return
+		}
+		data, err := os.ReadFile(cfg.jsonConfigPath)
+		if err != nil {
+			log.Fatalf("can't read %v, reason: %v", cfg.jsonConfigPath, err)
+		}
+
+		err = json.Unmarshal(data, &cfg)
+		if err != nil {
+			log.Fatalf("can't unmarshal json config, reason: %v", err)
+		}
+
+		err = json.Unmarshal(data, &cfg.Logger)
+		if err != nil {
+			log.Fatalf("can't unmarshal json config, reason: %v", err)
+		}
+
+		err = json.Unmarshal(data, &cfg.Repository.PG)
+		if err != nil {
+			log.Fatalf("can't unmarshal json config, reason: %v", err)
+		}
+
+		err = json.Unmarshal(data, &cfg.Repository.RAMWithBackup)
+		if err != nil {
+			log.Fatalf("can't unmarshal json config, reason: %v", err)
+		}
+
 	}
 }
 
 func NewServerConfig(options ...ServerOption) *ServerConfig {
 	cfg := &ServerConfig{
+		jsonConfigPath:       JSONServerConfigPathDefault,
 		CollectorAddress:     ServerAddressDefault,
 		ProfileAddress:       ProfileAddressDefault,
 		HashKey:              KeyDefault,
-		PrivateCryptoKeyPath: PublicCryptoKeyPathDefault,
+		PrivateCryptoKeyPath: PrivateCryptoKeyPathDefault,
 		Logger:               newLoggerConfig(),
 		Repository:           RepositoryConfig{RAMWithBackup: newBackupConfig(), PG: newPostgresConfig()},
 	}

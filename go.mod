@@ -3,7 +3,6 @@ module github.com/unbeman/ya-prac-mcas
 go 1.19
 
 require (
-	github.com/andreburgaud/crypt2go v1.3.1
 	github.com/caarlos0/env/v6 v6.10.1
 	github.com/chi-middleware/logrus-logger v0.2.0
 	github.com/fatih/errwrap v1.5.0
@@ -11,6 +10,7 @@ require (
 	github.com/go-critic/go-critic v0.8.1
 	github.com/golang/mock v1.6.0
 	github.com/jackc/pgx/v5 v5.3.1
+	github.com/jessevdk/go-flags v1.5.0
 	github.com/pressly/goose/v3 v3.10.0
 	github.com/shirou/gopsutil/v3 v3.23.3
 	github.com/sirupsen/logrus v1.9.0

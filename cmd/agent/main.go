@@ -45,7 +45,7 @@ func main() {
 		log.Println("Agent cancelled")
 	}()
 
-	cfg := configs.NewAgentConfig().FromFlags().FromEnv()
+	cfg := configs.NewAgentConfig().FromFlags().FromJSON().FromEnv()
 
 	logging.InitLogger(cfg.Logger)
 

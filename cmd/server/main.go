@@ -29,10 +29,10 @@ func main() {
 	fmt.Printf("Build date: %v\n", buildDate)
 	fmt.Printf("Build commit: %v\n", buildCommit)
 
-	cfg := *configs.NewServerConfig(configs.FromFlags(), configs.FromEnv())
+	cfg := *configs.NewServerConfig(configs.FromFlags(), configs.FromJSON(), configs.FromEnv())
 
 	logging.InitLogger(cfg.Logger)
-
+	log.Infof("SERVER CONFIG %+v\n", cfg)
 	log.Debugf("SERVER CONFIG %+v\n", cfg)
 
 	collectorServer, err := server.NewServerCollector(cfg)
