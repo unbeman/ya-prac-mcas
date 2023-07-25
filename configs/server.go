@@ -12,12 +12,13 @@ import (
 
 // Default config settings
 const (
-	ProfileAddressDefault = "127.0.0.1:8888"
-	BackupIntervalDefault = 300 * time.Second
-	BackupFileDefault     = "/tmp/devops-metrics-db.json"
-	RestoreDefault        = true
-	DSNDefault            = ""
-	PGMigrationDirDefault = "migrations"
+	ProfileAddressDefault       = "127.0.0.1:8888"
+	BackupIntervalDefault       = 300 * time.Second
+	BackupFileDefault           = "/tmp/devops-metrics-db.json"
+	RestoreDefault              = true
+	DSNDefault                  = ""
+	PGMigrationDirDefault       = "migrations"
+	PrivateCryptoKeyPathDefault = "private.pem"
 )
 
 type ServerOption func(config *ServerConfig)
@@ -59,11 +60,12 @@ func newBackupConfig() *BackupConfig {
 }
 
 type ServerConfig struct {
-	CollectorAddress string `env:"ADDRESS"`
-	Key              string `env:"KEY"`
-	Logger           LoggerConfig
-	Repository       RepositoryConfig
-	ProfileAddress   string
+	CollectorAddress     string `env:"ADDRESS"`
+	HashKey              string `env:"KEY"`
+	PrivateCryptoKeyPath string `env:"CRYPTO_KEY"`
+	Logger               LoggerConfig
+	Repository           RepositoryConfig
+	ProfileAddress       string
 }
 
 func FromEnv() ServerOption {
@@ -78,6 +80,7 @@ func FromFlags() ServerOption {
 	return func(cfg *ServerConfig) {
 		address := flag.String("a", ServerAddressDefault, "server address")
 		key := flag.String("k", KeyDefault, "key for calculating the metric hash")
+		privateCryptoKeyPath := flag.String("crypto-key", PrivateCryptoKeyPathDefault, "path to private key file")
 		restore := flag.Bool("r", RestoreDefault, "restore metrics to file")
 		storeInterval := flag.Duration("i", BackupIntervalDefault, "store interval")
 		storeFile := flag.String("f", BackupFileDefault, "json file path to store metrics")
@@ -85,7 +88,8 @@ func FromFlags() ServerOption {
 		dsn := flag.String("d", DSNDefault, "Postgres data source name")
 		flag.Parse()
 		cfg.CollectorAddress = *address
-		cfg.Key = *key
+		cfg.HashKey = *key
+		cfg.PrivateCryptoKeyPath = *privateCryptoKeyPath
 		cfg.Repository.RAMWithBackup.Restore = *restore
 		cfg.Repository.RAMWithBackup.Interval = *storeInterval
 		cfg.Repository.RAMWithBackup.File = *storeFile
@@ -96,11 +100,12 @@ func FromFlags() ServerOption {
 
 func NewServerConfig(options ...ServerOption) *ServerConfig {
 	cfg := &ServerConfig{
-		CollectorAddress: ServerAddressDefault,
-		ProfileAddress:   ProfileAddressDefault,
-		Key:              KeyDefault,
-		Logger:           newLoggerConfig(),
-		Repository:       RepositoryConfig{RAMWithBackup: newBackupConfig(), PG: newPostgresConfig()},
+		CollectorAddress:     ServerAddressDefault,
+		ProfileAddress:       ProfileAddressDefault,
+		HashKey:              KeyDefault,
+		PrivateCryptoKeyPath: PublicCryptoKeyPathDefault,
+		Logger:               newLoggerConfig(),
+		Repository:           RepositoryConfig{RAMWithBackup: newBackupConfig(), PG: newPostgresConfig()},
 	}
 	for _, option := range options {
 		option(cfg)

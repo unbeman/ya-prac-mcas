@@ -11,11 +11,12 @@ import (
 
 // Default config settings
 const (
-	PollIntervalDefault    = 2 * time.Second
-	ReportIntervalDefault  = 10 * time.Second
-	ReportTimeoutDefault   = 2 * time.Second
-	ClientTimeoutDefault   = 5 * time.Second
-	RateTokensCountDefault = 100
+	PollIntervalDefault        = 2 * time.Second
+	ReportIntervalDefault      = 10 * time.Second
+	ReportTimeoutDefault       = 2 * time.Second
+	ClientTimeoutDefault       = 5 * time.Second
+	RateTokensCountDefault     = 100
+	PublicCryptoKeyPathDefault = "public.pem"
 )
 
 type AgentOption func(config *AgentConfig)
@@ -37,11 +38,12 @@ func newHttConnectionConfig() HttConnectionConfig {
 }
 
 type AgentConfig struct {
-	Key            string        `env:"KEY"`
-	PollInterval   time.Duration `env:"POLL_INTERVAL"`
-	ReportInterval time.Duration `env:"REPORT_INTERVAL"`
-	Connection     HttConnectionConfig
-	Logger         LoggerConfig
+	HashKey             string        `env:"KEY"`
+	PublicCryptoKeyPath string        `env:"CRYPTO_KEY"`
+	PollInterval        time.Duration `env:"POLL_INTERVAL"`
+	ReportInterval      time.Duration `env:"REPORT_INTERVAL"`
+	Connection          HttConnectionConfig
+	Logger              LoggerConfig
 }
 
 func (cfg *AgentConfig) FromEnv() *AgentConfig {
@@ -55,26 +57,30 @@ func (cfg *AgentConfig) FromFlags() *AgentConfig {
 	address := flag.String("a", ServerAddressDefault, "metrics collection server address")
 	rateTokensCount := flag.Int("l", RateTokensCountDefault, "limit request count in one second")
 	key := flag.String("k", KeyDefault, "key for calculating the metric hash")
+	publicCryptoKeyPath := flag.String("crypto-key", PublicCryptoKeyPathDefault, "path to public crypto key file")
 	pollInterval := flag.Duration("p", PollIntervalDefault, "poll interval")
 	reportInterval := flag.Duration("r", ReportIntervalDefault, "report interval")
 	logLevel := flag.String("e", LogLevelDefault, "log level, allowed [info, debug]")
 	flag.Parse()
-	cfg.Key = *key
+	cfg.HashKey = *key
+
 	cfg.PollInterval = *pollInterval
 	cfg.ReportInterval = *reportInterval
 	cfg.Connection.Address = *address
 	cfg.Connection.RateTokensCount = *rateTokensCount
+	cfg.PublicCryptoKeyPath = *publicCryptoKeyPath
 	cfg.Logger.Level = *logLevel
 	return cfg
 }
 
 func NewAgentConfig() *AgentConfig {
 	cfg := &AgentConfig{
-		Key:            KeyDefault,
-		PollInterval:   PollIntervalDefault,
-		ReportInterval: ReportIntervalDefault,
-		Connection:     newHttConnectionConfig(),
-		Logger:         newLoggerConfig(),
+		HashKey:             KeyDefault,
+		PublicCryptoKeyPath: PublicCryptoKeyPathDefault,
+		PollInterval:        PollIntervalDefault,
+		ReportInterval:      ReportIntervalDefault,
+		Connection:          newHttConnectionConfig(),
+		Logger:              newLoggerConfig(),
 	}
 	return cfg
 }

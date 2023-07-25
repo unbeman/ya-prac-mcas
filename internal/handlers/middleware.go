@@ -1,9 +1,15 @@
 package handlers
 
 import (
+	"bytes"
 	"compress/gzip"
+	"crypto/rsa"
+	log "github.com/sirupsen/logrus"
+	"io"
 	"net/http"
 	"strings"
+
+	"github.com/unbeman/ya-prac-mcas/internal/utils"
 )
 
 const GZIPType string = "gzip"
@@ -50,4 +56,30 @@ func GZipMiddleware(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(writer, request)
 	})
+}
+
+func DecryptMiddleware(privateKey *rsa.PrivateKey) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		fn := func(writer http.ResponseWriter, request *http.Request) {
+			if privateKey != nil {
+				chyper, err := io.ReadAll(request.Body)
+				if err != nil {
+					http.Error(writer, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				request.Body.Close()
+				data, err := utils.GetDecryptedMessage(privateKey, chyper, request.Header.Get("Encrypted-Key"))
+				if err != nil {
+					log.Error(err)
+					http.Error(writer, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				request.Body = io.NopCloser(bytes.NewReader(data))
+				request.ContentLength = int64(len(data))
+			}
+			next.ServeHTTP(writer, request)
+		}
+		return http.HandlerFunc(fn)
+	}
 }
