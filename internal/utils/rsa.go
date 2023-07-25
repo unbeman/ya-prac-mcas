@@ -11,11 +11,11 @@ import (
 	"os"
 )
 
-var NoRSAKeyErr = errors.New("no key provided")
+var ErrNoRSAKey = errors.New("no key provided")
 
 func GetPublicKey(path string) (*rsa.PublicKey, error) {
 	if len(path) == 0 {
-		return nil, NoRSAKeyErr
+		return nil, ErrNoRSAKey
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -34,7 +34,7 @@ func GetPublicKey(path string) (*rsa.PublicKey, error) {
 
 func GetPrivateKey(path string) (*rsa.PrivateKey, error) {
 	if len(path) == 0 {
-		return nil, NoRSAKeyErr
+		return nil, ErrNoRSAKey
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {

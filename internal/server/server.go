@@ -89,7 +89,7 @@ func NewServerCollector(cfg configs.ServerConfig) (*serverCollector, error) {
 		return nil, fmt.Errorf("сan't create repository, reason: %w", err)
 	}
 	privateKey, err := utils.GetPrivateKey(cfg.PrivateCryptoKeyPath)
-	if errors.Is(err, utils.NoRSAKeyErr) {
+	if errors.Is(err, utils.ErrNoRSAKey) {
 		log.Warning("no private RSA key. Decryption disabled.")
 	}
 	if err != nil {

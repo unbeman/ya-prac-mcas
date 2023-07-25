@@ -135,7 +135,7 @@ func TestCollectorHandler_GetMetricHandler(t *testing.T) {
 			mockRepository := mock_storage.NewMockRepository(ctrl)
 			tt.setup(mockRepository)
 
-			ch := NewCollectorHandler(mockRepository, "")
+			ch := NewCollectorHandler(mockRepository, "", nil)
 
 			request := utils.NewGetMetricTestRequest(tt.metric.mType, tt.metric.name)
 
@@ -215,7 +215,7 @@ CounterC: 12345
 			mockRepository := mock_storage.NewMockRepository(ctrl)
 			tt.setup(mockRepository)
 
-			ch := NewCollectorHandler(mockRepository, "")
+			ch := NewCollectorHandler(mockRepository, "", nil)
 
 			request := newGetMetricsTestRequest()
 
@@ -344,7 +344,7 @@ func TestCollectorHandler_UpdateMetricHandler(t *testing.T) {
 			mockRepository := mock_storage.NewMockRepository(ctrl)
 			tt.setup(mockRepository)
 
-			ch := NewCollectorHandler(mockRepository, "")
+			ch := NewCollectorHandler(mockRepository, "", nil)
 
 			request := utils.NewUpdateMetricTestRequest(tt.metric.mType, tt.metric.name, tt.metric.value)
 
@@ -478,7 +478,7 @@ func TestCollectorHandler_GetJSONMetricHandler(t *testing.T) {
 			mockRepository := mock_storage.NewMockRepository(ctrl)
 			tt.setup(mockRepository)
 
-			ch := NewCollectorHandler(mockRepository, "")
+			ch := NewCollectorHandler(mockRepository, "", nil)
 
 			request := newGetMetricJSONTestRequest(tt.metric)
 
@@ -614,7 +614,7 @@ func TestCollectorHandler_UpdateJSONMetricHandler(t *testing.T) {
 			mockRepository := mock_storage.NewMockRepository(ctrl)
 			tt.setup(mockRepository)
 
-			ch := NewCollectorHandler(mockRepository, "")
+			ch := NewCollectorHandler(mockRepository, "", nil)
 
 			request := newUpdateMetricJSONTestRequest(tt.metric)
 
@@ -770,7 +770,7 @@ func TestCollectorHandler_UpdateJSONMetricsHandler(t *testing.T) {
 			mockRepository := mock_storage.NewMockRepository(ctrl)
 			tt.setup(mockRepository)
 
-			ch := NewCollectorHandler(mockRepository, "")
+			ch := NewCollectorHandler(mockRepository, "", nil)
 
 			request := newUpdatesMetricsJSONTestRequest(tt.metricsList)
 
@@ -848,7 +848,7 @@ func TestPingHandler(t *testing.T) {
 			mockRepository := mock_storage.NewMockRepository(ctrl)
 			tt.setup(mockRepository)
 
-			ch := NewCollectorHandler(mockRepository, "")
+			ch := NewCollectorHandler(mockRepository, "", nil)
 
 			request := newPingTestRequest()
 
@@ -873,7 +873,7 @@ func newPingTestRequest() *http.Request {
 
 func newBenchmarkHandler(repo storage.Repository) *CollectorHandler {
 	ramRepo := storage.NewRAMRepository()
-	ch := NewCollectorHandler(ramRepo, "")
+	ch := NewCollectorHandler(ramRepo, "", nil)
 	return ch
 }
 

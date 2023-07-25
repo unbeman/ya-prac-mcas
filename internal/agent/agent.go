@@ -26,7 +26,7 @@ type agentMetrics struct {
 
 func NewAgentMetrics(cfg *configs.AgentConfig) (*agentMetrics, error) {
 	pubKey, err := utils.GetPublicKey(cfg.PublicCryptoKeyPath)
-	if errors.Is(err, utils.NoRSAKeyErr) {
+	if errors.Is(err, utils.ErrNoRSAKey) {
 		log.Warning("no public RSA key. Encryption disabled.")
 	}
 	if err != nil {
