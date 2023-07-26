@@ -218,7 +218,7 @@ func (p *postgresRepository) SetGauges(ctx context.Context, slice []metrics.Gaug
 	defer transaction.Rollback()
 	stmt := transaction.StmtContext(ctx, p.statements.SetGauge)
 	for _, gauge := range slice {
-		_, err := stmt.ExecContext(ctx, gauge.GetName(), gauge.Value())
+		_, err = stmt.ExecContext(ctx, gauge.GetName(), gauge.Value())
 		if err != nil {
 			return nil, err
 		}

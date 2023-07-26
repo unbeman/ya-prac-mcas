@@ -1,3 +1,4 @@
+// Package metrics contains metric definition.
 package metrics
 
 import (

@@ -1,28 +1,33 @@
+// Package configs describes applications settings.
 package configs
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/caarlos0/env/v6"
 	log "github.com/sirupsen/logrus"
 )
 
+// Default config settings
 const (
-	ProfileAddressDefault = "127.0.0.1:8888"
-	BackupIntervalDefault = 300 * time.Second
-	BackupFileDefault     = "/tmp/devops-metrics-db.json"
-	RestoreDefault        = true
-	DSNDefault            = ""
-	PGMigrationDirDefault = "migrations"
+	ProfileAddressDefault       = "127.0.0.1:8888"
+	BackupIntervalDefault       = 300 * time.Second
+	BackupFileDefault           = "/tmp/devops-metrics-db.json"
+	RestoreDefault              = true
+	DSNDefault                  = ""
+	PGMigrationDirDefault       = "migrations"
+	PrivateCryptoKeyPathDefault = "private.pem"
 )
 
 type ServerOption func(config *ServerConfig)
 
 type PostgresConfig struct {
-	DSN          string `env:"DATABASE_DSN"`
-	MigrationDir string `env:"MIGRATION_DIR"`
+	DSN          string `env:"DATABASE_DSN" json:"database_dsn,omitempty"`
+	MigrationDir string `env:"MIGRATION_DIR" json:"migration_dir,omitempty"`
 }
 
 func (cfg *PostgresConfig) String() string {
@@ -40,12 +45,35 @@ type RepositoryConfig struct {
 
 type BackupConfig struct {
 	Interval time.Duration `env:"STORE_INTERVAL"`
-	Restore  bool          `env:"RESTORE"`
-	File     string        `env:"STORE_FILE"`
+	Restore  bool          `env:"RESTORE" json:"restore,omitempty"`
+	File     string        `env:"STORE_FILE" json:"file,omitempty"`
 }
 
 func (cfg *BackupConfig) String() string {
 	return fmt.Sprintf("[Interval: %v; File: %v; Restore: %v;]", cfg.Interval, cfg.File, cfg.Restore)
+}
+
+func (cfg *BackupConfig) UnmarshalJSON(data []byte) error {
+	type RealCfg BackupConfig
+	jCfg := struct {
+		Interval string `json:"store_interval,omitempty"`
+		*RealCfg
+	}{
+		RealCfg: (*RealCfg)(cfg),
+	}
+
+	err := json.Unmarshal(data, &jCfg)
+	if err != nil {
+		return err
+	}
+	if jCfg.Interval != "" {
+		cfg.Interval, err = time.ParseDuration(jCfg.Interval)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func newBackupConfig() *BackupConfig {
@@ -57,11 +85,12 @@ func newBackupConfig() *BackupConfig {
 }
 
 type ServerConfig struct {
-	CollectorAddress string `env:"ADDRESS"`
-	Key              string `env:"KEY"`
-	Logger           LoggerConfig
-	Repository       RepositoryConfig
-	ProfileAddress   string
+	CollectorAddress     string `env:"ADDRESS" json:"address,omitempty"`
+	HashKey              string `env:"KEY" json:"key,omitempty"`
+	PrivateCryptoKeyPath string `env:"CRYPTO_KEY" json:"crypto_key,omitempty"`
+	Logger               LoggerConfig
+	Repository           RepositoryConfig
+	ProfileAddress       string `json:"profile_address,omitempty"`
 }
 
 func FromEnv() ServerOption {
@@ -74,31 +103,67 @@ func FromEnv() ServerOption {
 
 func FromFlags() ServerOption {
 	return func(cfg *ServerConfig) {
-		address := flag.String("a", ServerAddressDefault, "server address")
-		key := flag.String("k", KeyDefault, "key for calculating the metric hash")
-		restore := flag.Bool("r", RestoreDefault, "restore metrics to file")
-		storeInterval := flag.Duration("i", BackupIntervalDefault, "store interval")
-		storeFile := flag.String("f", BackupFileDefault, "json file path to store metrics")
-		logLevel := flag.String("l", LogLevelDefault, "log level, allowed [info, debug]")
-		dsn := flag.String("d", DSNDefault, "Postgres data source name")
+		flag.Func("c", "path to json config", cfg.fromJSON)
+		flag.Func("config", "path to json config", cfg.fromJSON)
+
+		flag.StringVar(&cfg.CollectorAddress, "a", cfg.CollectorAddress, "server address")
+		flag.StringVar(&cfg.HashKey, "k", cfg.HashKey, "key for calculating the metric hash")
+		flag.StringVar(&cfg.PrivateCryptoKeyPath, "crypto-key", cfg.PrivateCryptoKeyPath, "path to private key file")
+		flag.BoolVar(&cfg.Repository.RAMWithBackup.Restore, "r", cfg.Repository.RAMWithBackup.Restore, "restore metrics to file")
+		flag.DurationVar(&cfg.Repository.RAMWithBackup.Interval, "i", cfg.Repository.RAMWithBackup.Interval, "store interval")
+		flag.StringVar(&cfg.Repository.RAMWithBackup.File, "f", cfg.Repository.RAMWithBackup.File, "json file path to store metrics")
+		flag.StringVar(&cfg.Logger.Level, "l", cfg.Logger.Level, "log level, allowed [info, debug]")
+		flag.StringVar(&cfg.Repository.PG.DSN, "d", cfg.Repository.PG.DSN, "Postgres data source name")
+
 		flag.Parse()
-		cfg.CollectorAddress = *address
-		cfg.Key = *key
-		cfg.Repository.RAMWithBackup.Restore = *restore
-		cfg.Repository.RAMWithBackup.Interval = *storeInterval
-		cfg.Repository.RAMWithBackup.File = *storeFile
-		cfg.Repository.PG.DSN = *dsn
-		cfg.Logger.Level = *logLevel
 	}
+}
+
+func (cfg *ServerConfig) fromJSON(path string) error {
+	envPath, isSet := os.LookupEnv("CONFIG")
+	if !isSet {
+		envPath = path
+	}
+
+	if envPath == "" {
+		return nil
+	}
+
+	data, err := os.ReadFile(envPath)
+	if err != nil {
+		log.Fatalf("can't read %v, reason: %v", envPath, err)
+	}
+
+	err = json.Unmarshal(data, &cfg)
+	if err != nil {
+		log.Fatalf("can't unmarshal json config, reason: %v", err)
+	}
+
+	err = json.Unmarshal(data, &cfg.Logger)
+	if err != nil {
+		log.Fatalf("can't unmarshal json config, reason: %v", err)
+	}
+
+	err = json.Unmarshal(data, &cfg.Repository.PG)
+	if err != nil {
+		log.Fatalf("can't unmarshal json config, reason: %v", err)
+	}
+
+	err = json.Unmarshal(data, &cfg.Repository.RAMWithBackup)
+	if err != nil {
+		log.Fatalf("can't unmarshal json config, reason: %v", err)
+	}
+	return nil
 }
 
 func NewServerConfig(options ...ServerOption) *ServerConfig {
 	cfg := &ServerConfig{
-		CollectorAddress: ServerAddressDefault,
-		ProfileAddress:   ProfileAddressDefault,
-		Key:              KeyDefault,
-		Logger:           newLoggerConfig(),
-		Repository:       RepositoryConfig{RAMWithBackup: newBackupConfig(), PG: newPostgresConfig()},
+		CollectorAddress:     ServerAddressDefault,
+		ProfileAddress:       ProfileAddressDefault,
+		HashKey:              KeyDefault,
+		PrivateCryptoKeyPath: PrivateCryptoKeyPathDefault,
+		Logger:               newLoggerConfig(),
+		Repository:           RepositoryConfig{RAMWithBackup: newBackupConfig(), PG: newPostgresConfig()},
 	}
 	for _, option := range options {
 		option(cfg)

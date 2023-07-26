@@ -1,8 +1,10 @@
+// Package sender describes connection with metrics server.
 package sender
 
 import (
 	"bytes"
 	"context"
+	"crypto/rsa"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,6 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/unbeman/ya-prac-mcas/configs"
+	"github.com/unbeman/ya-prac-mcas/internal/utils"
 
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 )
@@ -31,17 +34,19 @@ type httpSender struct {
 	address     string
 	timeout     time.Duration
 	rateLimiter *rate.Limiter
+	publicKey   *rsa.PublicKey
 }
 
-func NewHTTPSender(cfg configs.HttConnectionConfig) *httpSender {
+func NewHTTPSender(cfg configs.HttConnectionConfig, pubKey *rsa.PublicKey) (*httpSender, error) {
 	client := http.Client{Timeout: cfg.ClientTimeout}
-	rl := rate.NewLimiter(rate.Every(defaultRate), cfg.RateTokensCount) //не больше RateTokensCount запросов в секунду
+	rl := rate.NewLimiter(rate.Every(defaultRate), cfg.RateTokensCount) // не больше RateTokensCount запросов в секунду.
 	return &httpSender{
 		client:      client,
 		address:     cfg.Address,
 		timeout:     cfg.ReportTimeout,
 		rateLimiter: rl,
-	}
+		publicKey:   pubKey,
+	}, nil
 }
 
 func (h *httpSender) SendMetric(ctx context.Context, mp metrics.Params) {
@@ -53,7 +58,8 @@ func (h *httpSender) SendMetric(ctx context.Context, mp metrics.Params) {
 
 	request, err := http.NewRequestWithContext(ctx2, http.MethodPost, url, nil)
 	if err != nil {
-		log.Fatalln(err)
+		log.Error(err)
+		return
 	}
 	request.Header.Set("Content-Type", "text/plain")
 
@@ -82,15 +88,28 @@ func (h *httpSender) SendJSONMetric(ctx context.Context, mp metrics.Params) {
 
 	buf, err := json.Marshal(mp)
 	if err != nil {
-		log.Fatalf("Json marshal failed, %v\n", err)
+		log.Errorf("json marshal failed, %v", err)
 		return
+	}
+
+	var encryptedKey string
+
+	if h.publicKey != nil {
+		buf, encryptedKey, err = utils.GetEncryptedMessage(h.publicKey, buf)
+		if err != nil {
+			log.Errorf("encryption err, %v", err)
+			return
+		}
 	}
 
 	request, err := http.NewRequestWithContext(ctx2, http.MethodPost, url, bytes.NewBuffer(buf))
 	if err != nil {
-		log.Fatalln(err)
+		log.Error(err)
+		return
 	}
 	request.Header.Set("Content-Type", "text/plain")
+
+	request.Header.Set("Encrypted-Key", encryptedKey)
 
 	response, err := h.client.Do(request)
 	if err != nil {
@@ -121,8 +140,18 @@ func (h *httpSender) SendJSONMetrics(ctx context.Context, slice []metrics.Params
 	url := fmt.Sprintf("http://%s/updates/", h.address) //TODO: wrap
 	buf, err := json.Marshal(slice)
 	if err != nil {
-		log.Errorf("Json marshal failed, %v\n", err)
+		log.Errorf("json marshal failed, %v", err)
 		return
+	}
+
+	var encryptedKey string
+
+	if h.publicKey != nil {
+		buf, encryptedKey, err = utils.GetEncryptedMessage(h.publicKey, buf)
+		if err != nil {
+			log.Errorf("encryption err, %v", err)
+			return
+		}
 	}
 
 	request, err := http.NewRequestWithContext(ctx2, http.MethodPost, url, bytes.NewBuffer(buf))
@@ -131,6 +160,8 @@ func (h *httpSender) SendJSONMetrics(ctx context.Context, slice []metrics.Params
 		return
 	}
 	request.Header.Set("Content-Type", "text/plain")
+
+	request.Header.Set("Encrypted-Key", encryptedKey)
 
 	response, err := h.client.Do(request)
 	if err != nil {
@@ -145,7 +176,7 @@ func (h *httpSender) SendJSONMetrics(ctx context.Context, slice []metrics.Params
 		return
 	}
 
-	log.Infof("Metrics send")
+	log.Info("Metrics send")
 	log.Debugf("Received status code: %v for post request to %v\n", response.StatusCode, url)
 }
 
