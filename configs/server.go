@@ -21,7 +21,6 @@ const (
 	DSNDefault                  = ""
 	PGMigrationDirDefault       = "migrations"
 	PrivateCryptoKeyPathDefault = "private.pem"
-	JSONServerConfigPathDefault = ""
 )
 
 type ServerOption func(config *ServerConfig)
@@ -92,7 +91,6 @@ type ServerConfig struct {
 	Logger               LoggerConfig
 	Repository           RepositoryConfig
 	ProfileAddress       string `json:"profile_address,omitempty"`
-	jsonConfigPath       string
 }
 
 func FromEnv() ServerOption {
@@ -105,68 +103,61 @@ func FromEnv() ServerOption {
 
 func FromFlags() ServerOption {
 	return func(cfg *ServerConfig) {
-		address := flag.String("a", ServerAddressDefault, "server address")
-		key := flag.String("k", KeyDefault, "key for calculating the metric hash")
-		privateCryptoKeyPath := flag.String("crypto-key", PrivateCryptoKeyPathDefault, "path to private key file")
-		restore := flag.Bool("r", RestoreDefault, "restore metrics to file")
-		storeInterval := flag.Duration("i", BackupIntervalDefault, "store interval")
-		storeFile := flag.String("f", BackupFileDefault, "json file path to store metrics")
-		logLevel := flag.String("l", LogLevelDefault, "log level, allowed [info, debug]")
-		dsn := flag.String("d", DSNDefault, "Postgres data source name")
-		jsonConfigPath := flag.String("c", cfg.jsonConfigPath, "path to json config")
+		flag.Func("c", "path to json config", cfg.fromJSON)
+		flag.Func("config", "path to json config", cfg.fromJSON)
+
+		flag.StringVar(&cfg.CollectorAddress, "a", cfg.CollectorAddress, "server address")
+		flag.StringVar(&cfg.HashKey, "k", cfg.HashKey, "key for calculating the metric hash")
+		flag.StringVar(&cfg.PrivateCryptoKeyPath, "crypto-key", cfg.PrivateCryptoKeyPath, "path to private key file")
+		flag.BoolVar(&cfg.Repository.RAMWithBackup.Restore, "r", cfg.Repository.RAMWithBackup.Restore, "restore metrics to file")
+		flag.DurationVar(&cfg.Repository.RAMWithBackup.Interval, "i", cfg.Repository.RAMWithBackup.Interval, "store interval")
+		flag.StringVar(&cfg.Repository.RAMWithBackup.File, "f", cfg.Repository.RAMWithBackup.File, "json file path to store metrics")
+		flag.StringVar(&cfg.Logger.Level, "l", cfg.Logger.Level, "log level, allowed [info, debug]")
+		flag.StringVar(&cfg.Repository.PG.DSN, "d", cfg.Repository.PG.DSN, "Postgres data source name")
+
 		flag.Parse()
-		cfg.CollectorAddress = *address
-		cfg.HashKey = *key
-		cfg.PrivateCryptoKeyPath = *privateCryptoKeyPath
-		cfg.Repository.RAMWithBackup.Restore = *restore
-		cfg.Repository.RAMWithBackup.Interval = *storeInterval
-		cfg.Repository.RAMWithBackup.File = *storeFile
-		cfg.Repository.PG.DSN = *dsn
-		cfg.Logger.Level = *logLevel
-		cfg.jsonConfigPath = *jsonConfigPath
 	}
 }
 
-func FromJSON() ServerOption {
-	return func(cfg *ServerConfig) {
-		envPath, isSet := os.LookupEnv("CONFIG")
-		if isSet {
-			cfg.jsonConfigPath = envPath
-		}
-		if cfg.jsonConfigPath == "" {
-			return
-		}
-		data, err := os.ReadFile(cfg.jsonConfigPath)
-		if err != nil {
-			log.Fatalf("can't read %v, reason: %v", cfg.jsonConfigPath, err)
-		}
-
-		err = json.Unmarshal(data, &cfg)
-		if err != nil {
-			log.Fatalf("can't unmarshal json config, reason: %v", err)
-		}
-
-		err = json.Unmarshal(data, &cfg.Logger)
-		if err != nil {
-			log.Fatalf("can't unmarshal json config, reason: %v", err)
-		}
-
-		err = json.Unmarshal(data, &cfg.Repository.PG)
-		if err != nil {
-			log.Fatalf("can't unmarshal json config, reason: %v", err)
-		}
-
-		err = json.Unmarshal(data, &cfg.Repository.RAMWithBackup)
-		if err != nil {
-			log.Fatalf("can't unmarshal json config, reason: %v", err)
-		}
-
+func (cfg *ServerConfig) fromJSON(path string) error {
+	envPath, isSet := os.LookupEnv("CONFIG")
+	if !isSet {
+		envPath = path
 	}
+
+	if envPath == "" {
+		return nil
+	}
+
+	data, err := os.ReadFile(envPath)
+	if err != nil {
+		log.Fatalf("can't read %v, reason: %v", envPath, err)
+	}
+
+	err = json.Unmarshal(data, &cfg)
+	if err != nil {
+		log.Fatalf("can't unmarshal json config, reason: %v", err)
+	}
+
+	err = json.Unmarshal(data, &cfg.Logger)
+	if err != nil {
+		log.Fatalf("can't unmarshal json config, reason: %v", err)
+	}
+
+	err = json.Unmarshal(data, &cfg.Repository.PG)
+	if err != nil {
+		log.Fatalf("can't unmarshal json config, reason: %v", err)
+	}
+
+	err = json.Unmarshal(data, &cfg.Repository.RAMWithBackup)
+	if err != nil {
+		log.Fatalf("can't unmarshal json config, reason: %v", err)
+	}
+	return nil
 }
 
 func NewServerConfig(options ...ServerOption) *ServerConfig {
 	cfg := &ServerConfig{
-		jsonConfigPath:       JSONServerConfigPathDefault,
 		CollectorAddress:     ServerAddressDefault,
 		ProfileAddress:       ProfileAddressDefault,
 		HashKey:              KeyDefault,

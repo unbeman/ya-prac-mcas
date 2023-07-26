@@ -19,7 +19,6 @@ const (
 	ClientTimeoutDefault       = 5 * time.Second
 	RateTokensCountDefault     = 100
 	PublicCryptoKeyPathDefault = "public.pem"
-	JSONAgentConfigPathDefault = ""
 )
 
 type AgentOption func(config *AgentConfig)
@@ -78,7 +77,6 @@ type AgentConfig struct {
 	ReportInterval      time.Duration `env:"REPORT_INTERVAL"`
 	Connection          HttConnectionConfig
 	Logger              LoggerConfig
-	jsonConfigPath      string
 }
 
 func (cfg *AgentConfig) UnmarshalJSON(data []byte) error {
@@ -120,42 +118,34 @@ func (cfg *AgentConfig) FromEnv() *AgentConfig {
 }
 
 func (cfg *AgentConfig) FromFlags() *AgentConfig {
-	address := flag.String("a", ServerAddressDefault, "metrics collection server address")
-	rateTokensCount := flag.Int("l", RateTokensCountDefault, "limit request count in one second")
-	key := flag.String("k", KeyDefault, "key for calculating the metric hash")
-	publicCryptoKeyPath := flag.String("crypto-key", PublicCryptoKeyPathDefault, "path to public crypto key file")
-	pollInterval := flag.Duration("p", PollIntervalDefault, "poll interval")
-	reportInterval := flag.Duration("r", ReportIntervalDefault, "report interval")
-	logLevel := flag.String("e", LogLevelDefault, "log level, allowed [info, debug]")
-	flag.Parse()
-	cfg.HashKey = *key
+	flag.Func("c", "path to json config", cfg.fromJSON)
+	flag.Func("config", "path to json config", cfg.fromJSON)
 
-	cfg.PollInterval = *pollInterval
-	cfg.ReportInterval = *reportInterval
-	cfg.Connection.Address = *address
-	cfg.Connection.RateTokensCount = *rateTokensCount
-	cfg.PublicCryptoKeyPath = *publicCryptoKeyPath
-	cfg.Logger.Level = *logLevel
+	flag.StringVar(&cfg.Connection.Address, "a", cfg.Connection.Address, "metrics collection server address")
+	flag.IntVar(&cfg.Connection.RateTokensCount, "l", cfg.Connection.RateTokensCount, "limit request count in one second")
+	flag.StringVar(&cfg.HashKey, "k", cfg.HashKey, "key for calculating the metric hash")
+	flag.StringVar(&cfg.PublicCryptoKeyPath, "crypto-key", cfg.PublicCryptoKeyPath, "path to public crypto key file")
+	flag.DurationVar(&cfg.PollInterval, "p", cfg.PollInterval, "poll interval")
+	flag.DurationVar(&cfg.ReportInterval, "r", cfg.ReportInterval, "report interval")
+	flag.StringVar(&cfg.Logger.Level, "e", cfg.Logger.Level, "log level, allowed [info, debug]")
+
+	flag.Parse()
 	return cfg
 }
 
-func (cfg *AgentConfig) FromJSON() *AgentConfig {
-	jsonConfigPath := flag.String("c", cfg.jsonConfigPath, "path to json config")
-	cfg.jsonConfigPath = *jsonConfigPath
-	flag.Parse()
-
+func (cfg *AgentConfig) fromJSON(path string) error {
 	envPath, isSet := os.LookupEnv("CONFIG")
-	if isSet {
-		cfg.jsonConfigPath = envPath
+	if !isSet {
+		envPath = path
 	}
 
-	if cfg.jsonConfigPath == "" {
-		return cfg
+	if envPath == "" {
+		log.Print("No env json path")
+		return nil
 	}
-
-	data, err := os.ReadFile(cfg.jsonConfigPath)
+	data, err := os.ReadFile(envPath)
 	if err != nil {
-		log.Fatalf("can't read %v, reason: %v", cfg.jsonConfigPath, err)
+		log.Fatalf("can't read %v, reason: %v", envPath, err)
 	}
 
 	err = json.Unmarshal(data, &cfg)
@@ -172,7 +162,8 @@ func (cfg *AgentConfig) FromJSON() *AgentConfig {
 	if err != nil {
 		log.Fatalf("can't unmarshal json config connection, reason: %v", err)
 	}
-	return cfg
+
+	return nil
 }
 
 func NewAgentConfig() *AgentConfig {
@@ -183,7 +174,6 @@ func NewAgentConfig() *AgentConfig {
 		ReportInterval:      ReportIntervalDefault,
 		Connection:          newHttConnectionConfig(),
 		Logger:              newLoggerConfig(),
-		jsonConfigPath:      JSONAgentConfigPathDefault,
 	}
 	return cfg
 }
