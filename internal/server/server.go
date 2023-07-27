@@ -91,8 +91,7 @@ func NewServerCollector(cfg configs.ServerConfig) (*serverCollector, error) {
 	privateKey, err := utils.GetPrivateKey(cfg.PrivateCryptoKeyPath)
 	if errors.Is(err, utils.ErrNoRSAKey) {
 		log.Warning("no private RSA key. Decryption disabled.")
-	}
-	if err != nil {
+	} else {
 		return nil, fmt.Errorf("сan't get private key, reason: %w", err)
 	}
 
