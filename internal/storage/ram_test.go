@@ -413,3 +413,144 @@ func Test_ramRepository_SetGauges(t *testing.T) {
 		})
 	}
 }
+
+func TestNewRAMRepository(t *testing.T) {
+	tests := []struct {
+		name string
+		want *ramRepository
+	}{
+		{
+			name: "repo created",
+			want: &ramRepository{
+				counterStorage: map[string]metrics.Counter{},
+				gaugeStorage:   map[string]metrics.Gauge{},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, NewRAMRepository(), "NewRAMRepository()")
+		})
+	}
+}
+
+func Test_ramRepository_getCounter(t *testing.T) {
+	type fields struct {
+		counterStorage map[string]metrics.Counter
+		gaugeStorage   map[string]metrics.Gauge
+	}
+
+	tests := []struct {
+		name      string
+		fields    fields
+		inputName string
+		want      metrics.Counter
+		wantErr   bool
+	}{
+		{
+			name: "good",
+			fields: fields{
+				counterStorage: map[string]metrics.Counter{
+					"DogCount": metrics.NewCounter("DogCount", 3),
+				},
+				gaugeStorage: map[string]metrics.Gauge{},
+			},
+			inputName: "DogCount",
+			want:      metrics.NewCounter("DogCount", 3),
+			wantErr:   false,
+		},
+		{
+			name: "not found",
+			fields: fields{
+				counterStorage: map[string]metrics.Counter{
+					"DogCount": metrics.NewCounter("DogCount", 3),
+				},
+				gaugeStorage: map[string]metrics.Gauge{},
+			},
+			inputName: "CatCount",
+			want:      nil,
+			wantErr:   true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rs := &ramRepository{
+				counterStorage: tt.fields.counterStorage,
+				gaugeStorage:   tt.fields.gaugeStorage,
+			}
+			got, err := rs.getCounter(tt.inputName)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getCounter(%v) error = %v, wantErr %v", tt.inputName, err, tt.wantErr)
+			}
+
+			assert.Equalf(t, tt.want, got, "getCounter(%v)", tt.inputName)
+		})
+	}
+}
+
+func Test_ramRepository_SetGauges1(t *testing.T) {
+	type fields struct {
+		counterStorage map[string]metrics.Counter
+		gaugeStorage   map[string]metrics.Gauge
+	}
+
+	tests := []struct {
+		name       string
+		fields     fields
+		inputSlice []metrics.Gauge
+		want       []metrics.Gauge
+		wantErr    bool
+	}{
+		{
+			name: "good set as update existent gauges",
+			fields: fields{
+				counterStorage: map[string]metrics.Counter{},
+				gaugeStorage: map[string]metrics.Gauge{
+					"WaterPercent": metrics.NewGauge("WaterPercent", 0.8),
+					"FoodPercent":  metrics.NewGauge("FoodPercent", 1),
+				},
+			},
+			inputSlice: []metrics.Gauge{
+				metrics.NewGauge("WaterPercent", 0.5),
+				metrics.NewGauge("FoodPercent", 0.0001),
+			},
+			want: []metrics.Gauge{
+				metrics.NewGauge("WaterPercent", 0.5),
+				metrics.NewGauge("FoodPercent", 0.0001),
+			},
+			wantErr: false,
+		},
+		{
+			name: "good set as insert new gauges",
+			fields: fields{
+				counterStorage: map[string]metrics.Counter{},
+				gaugeStorage:   map[string]metrics.Gauge{},
+			},
+			inputSlice: []metrics.Gauge{
+				metrics.NewGauge("WaterPercent", 0.5),
+				metrics.NewGauge("FoodPercent", 0.0001),
+			},
+			want: []metrics.Gauge{
+				metrics.NewGauge("WaterPercent", 0.5),
+				metrics.NewGauge("FoodPercent", 0.0001),
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rs := &ramRepository{
+				counterStorage: tt.fields.counterStorage,
+				gaugeStorage:   tt.fields.gaugeStorage,
+			}
+			ctx := context.Background()
+
+			got, err := rs.SetGauges(context.Background(), tt.inputSlice)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SetGauges(%v, %v) error = %v, wantErr %v", ctx, tt.inputSlice, err, tt.wantErr)
+			}
+
+			assert.Equalf(t, tt.want, got, "SetGauges(%v, %v)", ctx, tt.inputSlice)
+		})
+	}
+}

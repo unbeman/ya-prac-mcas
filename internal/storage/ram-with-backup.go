@@ -59,7 +59,7 @@ func (br *BackupRepository) Backup() error {
 		return fmt.Errorf("BackupRepository.Backup(): can't open file %v - %w", br.filename, err)
 	}
 	defer func() {
-		if err := file.Close(); err != nil {
+		if err = file.Close(); err != nil {
 			log.Errorln(err)
 		}
 	}()
@@ -67,7 +67,7 @@ func (br *BackupRepository) Backup() error {
 
 	metricsL, err := br.GetAll(context.TODO())
 	if err != nil {
-		return fmt.Errorf("BackupRepository.Backup(): %v", err)
+		return fmt.Errorf("BackupRepository.Backup(): %w", err)
 	}
 	jsonMetricsL := make([]*metrics.Params, 0, len(metricsL))
 	for _, metric := range metricsL {
@@ -98,7 +98,7 @@ func (br *BackupRepository) Restore() error {
 		log.Info("No json metrics to load")
 		return nil
 	}
-	if err != nil { //TODO
+	if err != nil {
 		return fmt.Errorf("BackupRepository.Restore(): can't decode json %w", err)
 	}
 	log.Debugf("BackupRepository.Restore() metrics %+v\n", jsonMetricsL)
@@ -110,7 +110,7 @@ func (br *BackupRepository) Restore() error {
 			_, err = br.AddCounter(context.TODO(), params.Name, *params.ValueCounter)
 		}
 		if err != nil {
-			return fmt.Errorf("BackupRepository.Restore(): %v", err)
+			return fmt.Errorf("BackupRepository.Restore(): %w", err)
 		}
 
 	}

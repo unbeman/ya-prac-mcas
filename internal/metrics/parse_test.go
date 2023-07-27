@@ -3,11 +3,15 @@ package metrics
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/stretchr/testify/assert"
 	"io"
 	"math/rand"
+	"net/http"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/unbeman/ya-prac-mcas/internal/utils"
 )
 
 func TestParamsSlice_ParseJSON(t *testing.T) {
@@ -298,6 +302,152 @@ func TestParseJSON(t *testing.T) {
 			if tt.want.checkMetric && !reflect.DeepEqual(params, tt.want.params) {
 				t.Errorf("ParseJSON() got = %v, want %v", params, tt.want.params)
 			}
+		})
+	}
+}
+
+func TestParseURI(t *testing.T) {
+	type args struct {
+		request      *http.Request
+		requiredKeys []string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    Params
+		wantErr bool
+	}{
+		{
+			name: "good parse name and type",
+			args: args{
+				request:      utils.NewGetMetricTestRequest(CounterType, "DogCounter"),
+				requiredKeys: []string{PName, PType},
+			},
+			want: Params{
+				Name:         "DogCounter",
+				Type:         "counter",
+				ValueCounter: nil,
+				ValueGauge:   nil,
+				Hash:         "",
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid type",
+			args: args{
+				request:      utils.NewGetMetricTestRequest("dog", "DogCounter"),
+				requiredKeys: []string{PName, PType},
+			},
+			want: Params{
+				Name:         "DogCounter",
+				Type:         "",
+				ValueCounter: nil,
+				ValueGauge:   nil,
+				Hash:         "",
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty name",
+			args: args{
+				request:      utils.NewGetMetricTestRequest(CounterType, ""),
+				requiredKeys: []string{PName, PType},
+			},
+			want: Params{
+				Name:         "",
+				Type:         "",
+				ValueCounter: nil,
+				ValueGauge:   nil,
+				Hash:         "",
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid value",
+			args: args{
+				request:      utils.NewUpdateMetricTestRequest(CounterType, "Dog", "0.85"),
+				requiredKeys: []string{PName, PType, PValue},
+			},
+			want: Params{
+				Name:         "Dog",
+				Type:         "counter",
+				ValueCounter: nil,
+				ValueGauge:   nil,
+				Hash:         "",
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid gauge value",
+			args: args{
+				request:      utils.NewUpdateMetricTestRequest(GaugeType, "Water", "0.e"),
+				requiredKeys: []string{PName, PType, PValue},
+			},
+			want: Params{
+				Name:         "Water",
+				Type:         "gauge",
+				ValueCounter: nil,
+				ValueGauge:   nil,
+				Hash:         "",
+			},
+			wantErr: true,
+		},
+		{
+			name: "good parse gauge value",
+			args: args{
+				request:      utils.NewUpdateMetricTestRequest(GaugeType, "Water", "0.8"),
+				requiredKeys: []string{PType, PValue},
+			},
+			want: Params{
+				Name:         "",
+				Type:         "gauge",
+				ValueCounter: nil,
+				ValueGauge:   ptrGaugeValue(0.8),
+				Hash:         "",
+			},
+			wantErr: false,
+		},
+		{
+			name: "good parse counter value",
+			args: args{
+				request:      utils.NewUpdateMetricTestRequest(CounterType, "Dog", "80"),
+				requiredKeys: []string{PType, PValue},
+			},
+			want: Params{
+				Name:         "",
+				Type:         "counter",
+				ValueCounter: ptrCounterValue(80),
+				ValueGauge:   nil,
+				Hash:         "",
+			},
+			wantErr: false,
+		},
+		{
+			name: "unknown parameter",
+			args: args{
+				request:      utils.NewUpdateMetricTestRequest(CounterType, "Dog", "80"),
+				requiredKeys: []string{PType, PValue, "invalid"},
+			},
+			want: Params{
+				Name:         "",
+				Type:         "counter",
+				ValueCounter: ptrCounterValue(80),
+				ValueGauge:   nil,
+				Hash:         "",
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseURI(tt.args.request, tt.args.requiredKeys...)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseURI(%v, %v) error = %v, wantErr %v", tt.args.request, tt.args.requiredKeys,
+					err, tt.wantErr)
+				return
+			}
+
+			assert.Equalf(t, tt.want, got, "ParseURI(%v, %v)", tt.args.request, tt.args.requiredKeys)
 		})
 	}
 }
