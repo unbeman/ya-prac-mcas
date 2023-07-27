@@ -3,6 +3,7 @@ package handlers
 
 import (
 	"context"
+	"crypto/rsa"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,11 +25,11 @@ type CollectorHandler struct {
 	HashKey    []byte
 }
 
-func NewCollectorHandler(repository storage.Repository, key string) *CollectorHandler {
+func NewCollectorHandler(repository storage.Repository, hashKey string, privateRSAKey *rsa.PrivateKey) *CollectorHandler {
 	ch := &CollectorHandler{
 		Mux:        chi.NewMux(),
 		Repository: repository,
-		HashKey:    []byte(key),
+		HashKey:    []byte(hashKey),
 	}
 
 	ch.Use(middleware.RequestID)
@@ -38,15 +39,20 @@ func NewCollectorHandler(repository storage.Repository, key string) *CollectorHa
 	ch.Use(GZipMiddleware)
 	ch.Route("/", func(router chi.Router) {
 		router.Get("/", ch.GetMetricsHandler)
-		router.Route("/update", func(r chi.Router) {
-			r.Post("/{type}/{name}/{value}", ch.UpdateMetricHandler)
-			r.Post("/", ch.UpdateJSONMetricHandler)
+
+		router.Post("/update/{type}/{name}/{value}", ch.UpdateMetricHandler)
+
+		router.Group(func(r chi.Router) {
+			r.Use(DecryptMiddleware(privateRSAKey))
+			r.Post("/updates/", ch.UpdateJSONMetricsHandler)
+			r.Post("/update", ch.UpdateJSONMetricHandler)
 		})
-		router.Post("/updates/", ch.UpdateJSONMetricsHandler)
+
 		router.Route("/value", func(r chi.Router) {
 			r.Get("/{type}/{name}", ch.GetMetricHandler)
 			r.Post("/", ch.GetJSONMetricHandler)
 		})
+
 		router.Get("/ping", ch.PingHandler)
 	})
 	return ch

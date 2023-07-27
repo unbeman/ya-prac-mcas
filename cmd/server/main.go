@@ -8,9 +8,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/unbeman/ya-prac-mcas/internal/logging"
-
 	"github.com/unbeman/ya-prac-mcas/configs"
+	"github.com/unbeman/ya-prac-mcas/internal/logging"
 	"github.com/unbeman/ya-prac-mcas/internal/server"
 )
 
@@ -33,7 +32,7 @@ func main() {
 	cfg := *configs.NewServerConfig(configs.FromFlags(), configs.FromEnv())
 
 	logging.InitLogger(cfg.Logger)
-
+	log.Infof("SERVER CONFIG %+v\n", cfg)
 	log.Debugf("SERVER CONFIG %+v\n", cfg)
 
 	collectorServer, err := server.NewServerCollector(cfg)

@@ -10,6 +10,7 @@ require (
 	github.com/go-critic/go-critic v0.8.1
 	github.com/golang/mock v1.6.0
 	github.com/jackc/pgx/v5 v5.3.1
+	github.com/jessevdk/go-flags v1.5.0
 	github.com/pressly/goose/v3 v3.10.0
 	github.com/shirou/gopsutil/v3 v3.23.3
 	github.com/sirupsen/logrus v1.9.0
@@ -44,10 +45,10 @@ require (
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
-	golang.org/x/crypto v0.9.0 // indirect
+	golang.org/x/crypto v0.11.0 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20230213192124-5e25df0256eb // indirect
 	golang.org/x/mod v0.10.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/sys v0.10.0 // indirect
+	golang.org/x/text v0.11.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

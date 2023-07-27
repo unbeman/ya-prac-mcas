@@ -51,6 +51,10 @@ func main() {
 
 	log.Infof("AGENT CONFIG %+v\n", cfg)
 
-	am := agent.NewAgentMetrics(cfg)
+	am, err := agent.NewAgentMetrics(cfg)
+	if err != nil {
+		log.Error(err)
+		return
+	}
 	am.Run(ctx)
 }

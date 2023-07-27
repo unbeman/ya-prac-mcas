@@ -3,6 +3,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	_ "net/http/pprof"
@@ -13,6 +14,7 @@ import (
 	"github.com/unbeman/ya-prac-mcas/configs"
 	"github.com/unbeman/ya-prac-mcas/internal/handlers"
 	"github.com/unbeman/ya-prac-mcas/internal/storage"
+	"github.com/unbeman/ya-prac-mcas/internal/utils"
 )
 
 type serverCollector struct {
@@ -86,8 +88,15 @@ func NewServerCollector(cfg configs.ServerConfig) (*serverCollector, error) {
 	if err != nil {
 		return nil, fmt.Errorf("сan't create repository, reason: %w", err)
 	}
+	privateKey, err := utils.GetPrivateKey(cfg.PrivateCryptoKeyPath)
+	if errors.Is(err, utils.ErrNoRSAKey) {
+		log.Warning("no private RSA key. Decryption disabled.")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("сan't get private key, reason: %w", err)
+	}
 
-	handler := handlers.NewCollectorHandler(repository, cfg.Key)
+	handler := handlers.NewCollectorHandler(repository, cfg.HashKey, privateKey)
 
 	return &serverCollector{
 		httpServer:    &http.Server{Addr: cfg.CollectorAddress, Handler: handler},

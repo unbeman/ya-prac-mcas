@@ -3,6 +3,7 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -23,18 +24,29 @@ type agentMetrics struct {
 	reportInterval time.Duration
 }
 
-func NewAgentMetrics(cfg *configs.AgentConfig) *agentMetrics {
-	reporter := sender.NewHTTPSender(cfg.Connection)
+func NewAgentMetrics(cfg *configs.AgentConfig) (*agentMetrics, error) {
+	pubKey, err := utils.GetPublicKey(cfg.PublicCryptoKeyPath)
+	if errors.Is(err, utils.ErrNoRSAKey) {
+		log.Warning("no public RSA key. Encryption disabled.")
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	reporter, err := sender.NewHTTPSender(cfg.Connection, pubKey)
+	if err != nil {
+		return nil, err
+	}
 	collector := NewMetricsCollection()
 	tickerPool := utils.NewTickerPool()
 	return &agentMetrics{
 		reporter:       reporter,
 		collection:     collector,
 		tickerPool:     tickerPool,
-		hashKey:        []byte(cfg.Key),
+		hashKey:        []byte(cfg.HashKey),
 		pollInterval:   cfg.PollInterval,
 		reportInterval: cfg.ReportInterval,
-	}
+	}, nil
 }
 
 func (am *agentMetrics) Report(ctx context.Context) {

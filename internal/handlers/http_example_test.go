@@ -12,7 +12,7 @@ import (
 )
 
 func ExampleCollectorHandler_GetMetricHandler() {
-	ch := NewCollectorHandler(storage.NewRAMRepository(), "")
+	ch := NewCollectorHandler(storage.NewRAMRepository(), "", nil)
 	ch.Repository.AddCounter(context.TODO(), "Dog", 10)
 
 	request := utils.NewGetMetricTestRequest("counter", "Dog")
@@ -34,7 +34,7 @@ func ExampleCollectorHandler_GetMetricHandler() {
 }
 
 func ExampleCollectorHandler_GetMetricsHandler() {
-	ch := NewCollectorHandler(storage.NewRAMRepository(), "")
+	ch := NewCollectorHandler(storage.NewRAMRepository(), "", nil)
 	ch.Repository.AddCounter(context.TODO(), "Dog", 10)
 	ch.Repository.SetGauge(context.TODO(), "WaterPercent", 0.8)
 
@@ -58,7 +58,7 @@ func ExampleCollectorHandler_GetMetricsHandler() {
 }
 
 func ExampleCollectorHandler_GetJSONMetricHandler() {
-	ch := NewCollectorHandler(storage.NewRAMRepository(), "")
+	ch := NewCollectorHandler(storage.NewRAMRepository(), "", nil)
 	ch.Repository.AddCounter(context.TODO(), "Dog", 10)
 
 	request := newGetMetricJSONTestRequest(metrics.Params{Name: "Dog", Type: "counter"})
@@ -80,7 +80,7 @@ func ExampleCollectorHandler_GetJSONMetricHandler() {
 }
 
 func ExampleCollectorHandler_UpdateJSONMetricHandler() {
-	ch := NewCollectorHandler(storage.NewRAMRepository(), "")
+	ch := NewCollectorHandler(storage.NewRAMRepository(), "", nil)
 	ch.Repository.AddCounter(context.TODO(), "Dog", 10)
 
 	request := newUpdateMetricJSONTestRequest(metrics.Params{
@@ -106,7 +106,7 @@ func ExampleCollectorHandler_UpdateJSONMetricHandler() {
 }
 
 func ExampleCollectorHandler_UpdateJSONMetricsHandler() {
-	ch := NewCollectorHandler(storage.NewRAMRepository(), "")
+	ch := NewCollectorHandler(storage.NewRAMRepository(), "", nil)
 
 	request := newUpdatesMetricsJSONTestRequest([]metrics.Params{
 		{
@@ -138,7 +138,7 @@ func ExampleCollectorHandler_UpdateJSONMetricsHandler() {
 }
 
 func ExampleCollectorHandler_UpdateMetricHandler() {
-	ch := NewCollectorHandler(storage.NewRAMRepository(), "")
+	ch := NewCollectorHandler(storage.NewRAMRepository(), "", nil)
 	ch.Repository.AddCounter(context.TODO(), "Dog", 10)
 
 	request := utils.NewUpdateMetricTestRequest("counter", "Dog", "5")
