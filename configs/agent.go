@@ -18,7 +18,7 @@ const (
 	ReportTimeoutDefault       = 2 * time.Second
 	ClientTimeoutDefault       = 5 * time.Second
 	RateTokensCountDefault     = 100
-	PublicCryptoKeyPathDefault = "public.pem"
+	PublicCryptoKeyPathDefault = ""
 )
 
 type AgentOption func(config *AgentConfig)

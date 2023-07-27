@@ -20,7 +20,7 @@ const (
 	RestoreDefault              = true
 	DSNDefault                  = ""
 	PGMigrationDirDefault       = "migrations"
-	PrivateCryptoKeyPathDefault = "private.pem"
+	PrivateCryptoKeyPathDefault = ""
 )
 
 type ServerOption func(config *ServerConfig)
