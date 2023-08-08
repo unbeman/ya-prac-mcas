@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/unbeman/ya-prac-mcas/configs"
+	"github.com/unbeman/ya-prac-mcas/internal/controller"
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 	"github.com/unbeman/ya-prac-mcas/internal/storage"
 	mock_storage "github.com/unbeman/ya-prac-mcas/internal/storage/mock"
@@ -135,7 +136,7 @@ func TestCollectorHandler_GetMetricHandler(t *testing.T) {
 			mockRepository := mock_storage.NewMockRepository(ctrl)
 			tt.setup(mockRepository)
 
-			ch := NewCollectorHandler(mockRepository, "", nil)
+			ch := NewCollectorHandler(controller.NewController(mockRepository, ""), nil)
 
 			request := utils.NewGetMetricTestRequest(tt.metric.mType, tt.metric.name)
 
@@ -215,7 +216,7 @@ CounterC: 12345
 			mockRepository := mock_storage.NewMockRepository(ctrl)
 			tt.setup(mockRepository)
 
-			ch := NewCollectorHandler(mockRepository, "", nil)
+			ch := NewCollectorHandler(controller.NewController(mockRepository, ""), nil)
 
 			request := newGetMetricsTestRequest()
 
@@ -344,7 +345,7 @@ func TestCollectorHandler_UpdateMetricHandler(t *testing.T) {
 			mockRepository := mock_storage.NewMockRepository(ctrl)
 			tt.setup(mockRepository)
 
-			ch := NewCollectorHandler(mockRepository, "", nil)
+			ch := NewCollectorHandler(controller.NewController(mockRepository, ""), nil)
 
 			request := utils.NewUpdateMetricTestRequest(tt.metric.mType, tt.metric.name, tt.metric.value)
 
@@ -478,7 +479,7 @@ func TestCollectorHandler_GetJSONMetricHandler(t *testing.T) {
 			mockRepository := mock_storage.NewMockRepository(ctrl)
 			tt.setup(mockRepository)
 
-			ch := NewCollectorHandler(mockRepository, "", nil)
+			ch := NewCollectorHandler(controller.NewController(mockRepository, ""), nil)
 
 			request := newGetMetricJSONTestRequest(tt.metric)
 
@@ -614,7 +615,7 @@ func TestCollectorHandler_UpdateJSONMetricHandler(t *testing.T) {
 			mockRepository := mock_storage.NewMockRepository(ctrl)
 			tt.setup(mockRepository)
 
-			ch := NewCollectorHandler(mockRepository, "", nil)
+			ch := NewCollectorHandler(controller.NewController(mockRepository, ""), nil)
 
 			request := newUpdateMetricJSONTestRequest(tt.metric)
 
@@ -770,7 +771,7 @@ func TestCollectorHandler_UpdateJSONMetricsHandler(t *testing.T) {
 			mockRepository := mock_storage.NewMockRepository(ctrl)
 			tt.setup(mockRepository)
 
-			ch := NewCollectorHandler(mockRepository, "", nil)
+			ch := NewCollectorHandler(controller.NewController(mockRepository, ""), nil)
 
 			request := newUpdatesMetricsJSONTestRequest(tt.metricsList)
 
@@ -827,7 +828,7 @@ func TestPingHandler(t *testing.T) {
 				contentType: textContentType,
 			},
 			setup: func(mR *mock_storage.MockRepository) {
-				mR.EXPECT().Ping().Return(nil)
+				mR.EXPECT().Ping(gomock.Any()).Return(nil)
 			},
 		},
 		{
@@ -837,7 +838,7 @@ func TestPingHandler(t *testing.T) {
 				contentType: textContentType,
 			},
 			setup: func(mR *mock_storage.MockRepository) {
-				mR.EXPECT().Ping().Return(errors.New("repository error"))
+				mR.EXPECT().Ping(gomock.Any()).Return(errors.New("repository error"))
 			},
 		},
 	}
@@ -848,7 +849,7 @@ func TestPingHandler(t *testing.T) {
 			mockRepository := mock_storage.NewMockRepository(ctrl)
 			tt.setup(mockRepository)
 
-			ch := NewCollectorHandler(mockRepository, "", nil)
+			ch := NewCollectorHandler(controller.NewController(mockRepository, ""), nil)
 
 			request := newPingTestRequest()
 
@@ -873,7 +874,7 @@ func newPingTestRequest() *http.Request {
 
 func newBenchmarkHandler(repo storage.Repository) *CollectorHandler {
 	ramRepo := storage.NewRAMRepository()
-	ch := NewCollectorHandler(ramRepo, "", nil)
+	ch := NewCollectorHandler(controller.NewController(ramRepo, ""), nil)
 	return ch
 }
 

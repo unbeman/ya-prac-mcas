@@ -32,12 +32,15 @@ func NewAgentMetrics(cfg *configs.AgentConfig) (*agentMetrics, error) {
 		return nil, err
 	}
 
-	reporter, err := sender.NewHTTPSender(cfg.Connection, pubKey)
+	reporter, err := sender.GetSender(cfg.Connection, pubKey)
 	if err != nil {
 		return nil, err
 	}
+
 	collector := NewMetricsCollection()
+
 	tickerPool := utils.NewTickerPool()
+
 	return &agentMetrics{
 		reporter:       reporter,
 		collection:     collector,
@@ -50,7 +53,7 @@ func NewAgentMetrics(cfg *configs.AgentConfig) (*agentMetrics, error) {
 
 func (am *agentMetrics) Report(ctx context.Context) {
 	paramSlice := am.prepareMetrics(am.collection.GetMetrics(ctx))
-	am.reporter.SendJSONMetrics(ctx, paramSlice)
+	am.reporter.SendMetrics(ctx, paramSlice)
 }
 
 func (am *agentMetrics) Run(ctx context.Context) {
@@ -70,8 +73,8 @@ func (am agentMetrics) getHash(metric metrics.Metric) string {
 	return metric.Hash(am.hashKey)
 }
 
-func (am agentMetrics) prepareMetrics(ms []metrics.Metric) []metrics.Params {
-	paramSlice := make([]metrics.Params, 0, len(ms))
+func (am agentMetrics) prepareMetrics(ms []metrics.Metric) metrics.ParamsSlice {
+	paramSlice := make(metrics.ParamsSlice, 0, len(ms))
 	for _, metric := range ms {
 		params := metric.ToParams()
 		params.Hash = am.getHash(metric)

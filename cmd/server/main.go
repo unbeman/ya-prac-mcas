@@ -35,7 +35,7 @@ func main() {
 	log.Infof("SERVER CONFIG %+v\n", cfg)
 	log.Debugf("SERVER CONFIG %+v\n", cfg)
 
-	collectorServer, err := server.NewServerCollector(cfg)
+	app, err := server.GetApplication(cfg)
 	if err != nil {
 		log.Error(err)
 		return
@@ -54,8 +54,8 @@ func main() {
 		sig := <-exit
 		log.Infof("Got signal '%v'", sig)
 
-		collectorServer.Shutdown()
+		app.Stop()
 	}()
 
-	collectorServer.Run()
+	app.Start()
 }

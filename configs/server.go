@@ -12,8 +12,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	HTTPProtocol = "http"
+	GRPCProtocol = "grpc"
+)
+
 // Default config settings
 const (
+	ProtocolDefault             = HTTPProtocol
 	ProfileAddressDefault       = "127.0.0.1:8888"
 	BackupIntervalDefault       = 300 * time.Second
 	BackupFileDefault           = "/tmp/devops-metrics-db.json"
@@ -91,6 +97,7 @@ type ServerConfig struct {
 	Logger               LoggerConfig
 	Repository           RepositoryConfig
 	ProfileAddress       string `json:"profile_address,omitempty"`
+	Protocol             string `env:"PROTOCOL" json:"protocol,omitempty"`
 }
 
 func FromEnv() ServerOption {
@@ -114,6 +121,7 @@ func FromFlags() ServerOption {
 		flag.StringVar(&cfg.Repository.RAMWithBackup.File, "f", cfg.Repository.RAMWithBackup.File, "json file path to store metrics")
 		flag.StringVar(&cfg.Logger.Level, "l", cfg.Logger.Level, "log level, allowed [info, debug]")
 		flag.StringVar(&cfg.Repository.PG.DSN, "d", cfg.Repository.PG.DSN, "Postgres data source name")
+		flag.StringVar(&cfg.Protocol, "p", cfg.Protocol, "server protocol, allowed [http, grpc]")
 
 		flag.Parse()
 	}
@@ -158,6 +166,7 @@ func (cfg *ServerConfig) fromJSON(path string) error {
 
 func NewServerConfig(options ...ServerOption) *ServerConfig {
 	cfg := &ServerConfig{
+		Protocol:             ProtocolDefault,
 		CollectorAddress:     ServerAddressDefault,
 		ProfileAddress:       ProfileAddressDefault,
 		HashKey:              KeyDefault,
