@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"sync"
@@ -24,12 +25,16 @@ type Server interface {
 	Close() error
 }
 
-func GetServer(protocol string, addr string, control *controller.Controller, key *rsa.PrivateKey) Server {
+func GetServer(
+	protocol string,
+	addr string,
+	control *controller.Controller,
+	key *rsa.PrivateKey, trustedSubnet *net.IPNet) Server {
 	switch protocol {
 	case configs.GRPCProtocol:
-		return NewGRPCServer(addr, control)
+		return NewGRPCServer(addr, control, trustedSubnet)
 	default:
-		return NewHTTPServer(addr, control, key)
+		return NewHTTPServer(addr, control, key, trustedSubnet)
 	}
 }
 
@@ -51,9 +56,14 @@ func GetApplication(cfg configs.ServerConfig) (*application, error) {
 		return nil, fmt.Errorf("сan't get private key, reason: %w", err)
 	}
 
+	trustedSubnet, err := utils.GetTrustedSubnet(cfg.TrustedSubnet)
+	if err != nil {
+		return nil, err
+	}
+
 	control := controller.NewController(repository, cfg.HashKey)
 
-	server := GetServer(cfg.Protocol, cfg.CollectorAddress, control, privateKey)
+	server := GetServer(cfg.Protocol, cfg.CollectorAddress, control, privateKey, trustedSubnet)
 
 	return &application{
 		server:        server,

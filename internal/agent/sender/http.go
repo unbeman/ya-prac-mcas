@@ -55,6 +55,13 @@ func (h *httpSender) SendMetric(ctx context.Context, mp metrics.Params) {
 	}
 	request.Header.Set("Content-Type", "text/plain")
 
+	ip, err := utils.GetOutboundIP()
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	request.Header.Set("X-Real-IP", ip)
+
 	response, err := h.client.Do(request)
 	if err != nil {
 		log.Errorln(err)
@@ -102,6 +109,13 @@ func (h *httpSender) SendJSONMetric(ctx context.Context, mp metrics.Params) {
 	request.Header.Set("Content-Type", "text/plain")
 
 	request.Header.Set("Encrypted-Key", encryptedKey)
+
+	ip, err := utils.GetOutboundIP()
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	request.Header.Set("X-Real-IP", ip)
 
 	response, err := h.client.Do(request)
 	if err != nil {
@@ -154,6 +168,13 @@ func (h *httpSender) SendMetrics(ctx context.Context, slice metrics.ParamsSlice)
 	request.Header.Set("Content-Type", "text/plain")
 
 	request.Header.Set("Encrypted-Key", encryptedKey)
+
+	ip, err := utils.GetOutboundIP()
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	request.Header.Set("X-Real-IP", ip)
 
 	response, err := h.client.Do(request)
 	if err != nil {

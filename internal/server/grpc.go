@@ -17,8 +17,9 @@ type GRPCServer struct {
 	service *handlers.GRPCService
 }
 
-func NewGRPCServer(addr string, control *controller.Controller) *GRPCServer {
-	server := grpc.NewServer()
+func NewGRPCServer(addr string, control *controller.Controller, trustedSubnet *net.IPNet) *GRPCServer {
+	server := grpc.NewServer(grpc.UnaryInterceptor(handlers.IPCheckerServerInterceptor(trustedSubnet)))
+	//server := grpc.NewServer()
 	service := handlers.NewGRPCService(control)
 
 	return &GRPCServer{address: addr, server: server, service: service}

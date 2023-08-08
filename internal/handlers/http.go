@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 
@@ -24,7 +25,7 @@ type CollectorHandler struct {
 	controller *controller.Controller
 }
 
-func NewCollectorHandler(controller *controller.Controller, privateRSAKey *rsa.PrivateKey) *CollectorHandler {
+func NewCollectorHandler(controller *controller.Controller, privateRSAKey *rsa.PrivateKey, trustedSubnet *net.IPNet) *CollectorHandler {
 	ch := &CollectorHandler{
 		Mux:        chi.NewMux(),
 		controller: controller,
@@ -34,6 +35,7 @@ func NewCollectorHandler(controller *controller.Controller, privateRSAKey *rsa.P
 	ch.Use(middleware.RealIP)
 	ch.Use(logger.Logger("router", log.New()))
 	ch.Use(middleware.Recoverer)
+	ch.Use(IPCheckerMiddleware(trustedSubnet))
 	ch.Use(GZipMiddleware)
 	ch.Route("/", func(router chi.Router) {
 		router.Get("/", ch.GetMetricsHandler)

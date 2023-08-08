@@ -9,12 +9,13 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/encoding/gzip"
-	_ "google.golang.org/grpc/encoding/gzip"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"time"
 
 	"github.com/unbeman/ya-prac-mcas/configs"
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
+	"github.com/unbeman/ya-prac-mcas/internal/utils"
 	pb "github.com/unbeman/ya-prac-mcas/proto"
 )
 
@@ -45,6 +46,15 @@ func (gs *GRPCSender) SendMetrics(ctx context.Context, slice metrics.ParamsSlice
 
 	ctx2, cancel := context.WithTimeout(ctx, gs.timeout)
 	defer cancel()
+
+	ip, err := utils.GetOutboundIP()
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	meta := metadata.New(map[string]string{"x-real-ip": ip})
+	ctx2 = metadata.NewOutgoingContext(ctx2, meta)
 
 	protMetrics := slice.ToProto()
 
