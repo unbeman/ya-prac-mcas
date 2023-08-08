@@ -23,15 +23,16 @@ const (
 
 type AgentOption func(config *AgentConfig)
 
-type HttConnectionConfig struct {
+type ConnectionConfig struct {
 	Address         string `env:"ADDRESS" json:"address,omitempty"`
 	RateTokensCount int    `json:"rate_tokens_count,omitempty"`
 	ClientTimeout   time.Duration
 	ReportTimeout   time.Duration
+	Protocol        string `env:"PROTOCOL" json:"protocol,omitempty"`
 }
 
-func (cfg *HttConnectionConfig) UnmarshalJSON(data []byte) error {
-	type RealCfg HttConnectionConfig
+func (cfg *ConnectionConfig) UnmarshalJSON(data []byte) error {
+	type RealCfg ConnectionConfig
 	jCfg := struct {
 		ClientTimeout string `json:"client_timeout,omitempty"`
 		ReportTimeout string `json:"report_timeout,omitempty"`
@@ -61,8 +62,8 @@ func (cfg *HttConnectionConfig) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func newHttConnectionConfig() HttConnectionConfig {
-	return HttConnectionConfig{
+func newHttConnectionConfig() ConnectionConfig {
+	return ConnectionConfig{
 		Address:         ServerAddressDefault,
 		ClientTimeout:   ClientTimeoutDefault,
 		ReportTimeout:   ReportTimeoutDefault,
@@ -75,7 +76,7 @@ type AgentConfig struct {
 	PublicCryptoKeyPath string        `env:"CRYPTO_KEY" json:"crypto_key,omitempty"`
 	PollInterval        time.Duration `env:"POLL_INTERVAL"`
 	ReportInterval      time.Duration `env:"REPORT_INTERVAL"`
-	Connection          HttConnectionConfig
+	Connection          ConnectionConfig
 	Logger              LoggerConfig
 }
 
@@ -128,6 +129,7 @@ func (cfg *AgentConfig) FromFlags() *AgentConfig {
 	flag.DurationVar(&cfg.PollInterval, "p", cfg.PollInterval, "poll interval")
 	flag.DurationVar(&cfg.ReportInterval, "r", cfg.ReportInterval, "report interval")
 	flag.StringVar(&cfg.Logger.Level, "e", cfg.Logger.Level, "log level, allowed [info, debug]")
+	flag.StringVar(&cfg.Connection.Protocol, "protocol", cfg.Connection.Protocol, "agent's client protocol, allowed [http, grpc]")
 
 	flag.Parse()
 	return cfg

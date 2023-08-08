@@ -6,6 +6,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+
+	pb "github.com/unbeman/ya-prac-mcas/proto"
 )
 
 const (
@@ -19,6 +21,7 @@ type Metric interface {
 	GetType() string
 	Hash(key []byte) string
 	ToParams() Params
+	ToProto() *pb.Metric
 }
 
 type Gauge interface {
@@ -50,6 +53,11 @@ func (g *gauge) GetType() string {
 func (g *gauge) ToParams() Params {
 	v := g.Value()
 	return Params{Name: g.name, Type: g.GetType(), ValueGauge: &v}
+}
+
+func (g *gauge) ToProto() *pb.Metric {
+	v := g.Value()
+	return &pb.Metric{Name: g.name, Type: g.GetType(), Value: v}
 }
 
 func (g *gauge) Hash(key []byte) string {
@@ -114,6 +122,11 @@ func (c *counter) GetType() string {
 func (c *counter) ToParams() Params {
 	v := c.Value()
 	return Params{Name: c.name, Type: c.GetType(), ValueCounter: &v}
+}
+
+func (c *counter) ToProto() *pb.Metric {
+	v := c.Value()
+	return &pb.Metric{Name: c.name, Type: c.GetType(), Delta: v}
 }
 
 func (c *counter) Hash(key []byte) string {

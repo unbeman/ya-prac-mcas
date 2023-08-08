@@ -24,7 +24,7 @@ type Repository interface {
 
 	GetAll(ctx context.Context) ([]metrics.Metric, error)
 
-	Ping() error
+	Ping(ctx context.Context) error
 	Shutdown() error
 }
 

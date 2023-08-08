@@ -126,8 +126,10 @@ func (br *BackupRepository) isTickerEnable() bool {
 // Run makes backup every interval, if interval more than 0 seconds.
 func (br *BackupRepository) Run() {
 	if !br.isTickerEnable() {
+		log.Info("Backupper not started, no interval provided")
 		return
 	}
+	log.Info("Backupper started")
 	ticker := time.NewTicker(br.interval)
 	for {
 		select {
