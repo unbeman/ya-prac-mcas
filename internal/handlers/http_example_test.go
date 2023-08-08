@@ -13,7 +13,7 @@ import (
 )
 
 func ExampleCollectorHandler_GetMetricHandler() {
-	ch := NewCollectorHandler(controller.NewController(storage.NewRAMRepository(), ""), nil)
+	ch := NewCollectorHandler(controller.NewController(storage.NewRAMRepository(), ""), nil, nil)
 	ch.controller.UpdateMetric(context.TODO(), newCounterParams("Dog", 10, ""))
 
 	request := utils.NewGetMetricTestRequest("counter", "Dog")
@@ -35,7 +35,7 @@ func ExampleCollectorHandler_GetMetricHandler() {
 }
 
 func ExampleCollectorHandler_GetMetricsHandler() {
-	ch := NewCollectorHandler(controller.NewController(storage.NewRAMRepository(), ""), nil)
+	ch := NewCollectorHandler(controller.NewController(storage.NewRAMRepository(), ""), nil, nil)
 	ch.controller.UpdateMetric(context.TODO(), newCounterParams("Dog", 10, ""))
 	ch.controller.UpdateMetric(context.TODO(), newGaugeParams("WaterPercent", 0.8, ""))
 
@@ -59,7 +59,7 @@ func ExampleCollectorHandler_GetMetricsHandler() {
 }
 
 func ExampleCollectorHandler_GetJSONMetricHandler() {
-	ch := NewCollectorHandler(controller.NewController(storage.NewRAMRepository(), ""), nil)
+	ch := NewCollectorHandler(controller.NewController(storage.NewRAMRepository(), ""), nil, nil)
 	ch.controller.UpdateMetric(context.TODO(), newCounterParams("Dog", 10, ""))
 
 	request := newGetMetricJSONTestRequest(metrics.Params{Name: "Dog", Type: "counter"})
@@ -81,7 +81,7 @@ func ExampleCollectorHandler_GetJSONMetricHandler() {
 }
 
 func ExampleCollectorHandler_UpdateJSONMetricHandler() {
-	ch := NewCollectorHandler(controller.NewController(storage.NewRAMRepository(), ""), nil)
+	ch := NewCollectorHandler(controller.NewController(storage.NewRAMRepository(), ""), nil, nil)
 	ch.controller.UpdateMetric(context.TODO(), newCounterParams("Dog", 10, ""))
 
 	request := newUpdateMetricJSONTestRequest(metrics.Params{
@@ -107,7 +107,7 @@ func ExampleCollectorHandler_UpdateJSONMetricHandler() {
 }
 
 func ExampleCollectorHandler_UpdateJSONMetricsHandler() {
-	ch := NewCollectorHandler(controller.NewController(storage.NewRAMRepository(), ""), nil)
+	ch := NewCollectorHandler(controller.NewController(storage.NewRAMRepository(), ""), nil, nil)
 
 	request := newUpdatesMetricsJSONTestRequest([]metrics.Params{
 		{
@@ -139,7 +139,7 @@ func ExampleCollectorHandler_UpdateJSONMetricsHandler() {
 }
 
 func ExampleCollectorHandler_UpdateMetricHandler() {
-	ch := NewCollectorHandler(controller.NewController(storage.NewRAMRepository(), ""), nil)
+	ch := NewCollectorHandler(controller.NewController(storage.NewRAMRepository(), ""), nil, nil)
 	ch.controller.UpdateMetric(context.TODO(), newCounterParams("Dog", 10, ""))
 
 	request := utils.NewUpdateMetricTestRequest("counter", "Dog", "5")

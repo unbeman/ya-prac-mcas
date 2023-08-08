@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/unbeman/ya-prac-mcas/configs"
 	"github.com/unbeman/ya-prac-mcas/internal/controller"
 	"github.com/unbeman/ya-prac-mcas/internal/metrics"
 	"github.com/unbeman/ya-prac-mcas/internal/storage"
@@ -136,7 +135,7 @@ func TestCollectorHandler_GetMetricHandler(t *testing.T) {
 			mockRepository := mock_storage.NewMockRepository(ctrl)
 			tt.setup(mockRepository)
 
-			ch := NewCollectorHandler(controller.NewController(mockRepository, ""), nil)
+			ch := NewCollectorHandler(controller.NewController(mockRepository, ""), nil, nil)
 
 			request := utils.NewGetMetricTestRequest(tt.metric.mType, tt.metric.name)
 
@@ -216,7 +215,7 @@ CounterC: 12345
 			mockRepository := mock_storage.NewMockRepository(ctrl)
 			tt.setup(mockRepository)
 
-			ch := NewCollectorHandler(controller.NewController(mockRepository, ""), nil)
+			ch := NewCollectorHandler(controller.NewController(mockRepository, ""), nil, nil)
 
 			request := newGetMetricsTestRequest()
 
@@ -345,7 +344,7 @@ func TestCollectorHandler_UpdateMetricHandler(t *testing.T) {
 			mockRepository := mock_storage.NewMockRepository(ctrl)
 			tt.setup(mockRepository)
 
-			ch := NewCollectorHandler(controller.NewController(mockRepository, ""), nil)
+			ch := NewCollectorHandler(controller.NewController(mockRepository, ""), nil, nil)
 
 			request := utils.NewUpdateMetricTestRequest(tt.metric.mType, tt.metric.name, tt.metric.value)
 
@@ -479,7 +478,7 @@ func TestCollectorHandler_GetJSONMetricHandler(t *testing.T) {
 			mockRepository := mock_storage.NewMockRepository(ctrl)
 			tt.setup(mockRepository)
 
-			ch := NewCollectorHandler(controller.NewController(mockRepository, ""), nil)
+			ch := NewCollectorHandler(controller.NewController(mockRepository, ""), nil, nil)
 
 			request := newGetMetricJSONTestRequest(tt.metric)
 
@@ -615,7 +614,7 @@ func TestCollectorHandler_UpdateJSONMetricHandler(t *testing.T) {
 			mockRepository := mock_storage.NewMockRepository(ctrl)
 			tt.setup(mockRepository)
 
-			ch := NewCollectorHandler(controller.NewController(mockRepository, ""), nil)
+			ch := NewCollectorHandler(controller.NewController(mockRepository, ""), nil, nil)
 
 			request := newUpdateMetricJSONTestRequest(tt.metric)
 
@@ -771,7 +770,7 @@ func TestCollectorHandler_UpdateJSONMetricsHandler(t *testing.T) {
 			mockRepository := mock_storage.NewMockRepository(ctrl)
 			tt.setup(mockRepository)
 
-			ch := NewCollectorHandler(controller.NewController(mockRepository, ""), nil)
+			ch := NewCollectorHandler(controller.NewController(mockRepository, ""), nil, nil)
 
 			request := newUpdatesMetricsJSONTestRequest(tt.metricsList)
 
@@ -849,7 +848,7 @@ func TestPingHandler(t *testing.T) {
 			mockRepository := mock_storage.NewMockRepository(ctrl)
 			tt.setup(mockRepository)
 
-			ch := NewCollectorHandler(controller.NewController(mockRepository, ""), nil)
+			ch := NewCollectorHandler(controller.NewController(mockRepository, ""), nil, nil)
 
 			request := newPingTestRequest()
 
@@ -873,8 +872,7 @@ func newPingTestRequest() *http.Request {
 }
 
 func newBenchmarkHandler(repo storage.Repository) *CollectorHandler {
-	ramRepo := storage.NewRAMRepository()
-	ch := NewCollectorHandler(controller.NewController(ramRepo, ""), nil)
+	ch := NewCollectorHandler(controller.NewController(repo, ""), nil, nil)
 	return ch
 }
 
@@ -882,11 +880,11 @@ func BenchmarkUpdateHandlers(b *testing.B) {
 	ramRepo := storage.NewRAMRepository()
 	handlerWithRAM := newBenchmarkHandler(ramRepo)
 
-	pgRepo, _ := storage.NewPostgresRepository(configs.PostgresConfig{
-		DSN:          "postgresql://postgres:1211@localhost:5432/mcas",
-		MigrationDir: configs.PGMigrationDirDefault},
-	)
-	handlerWithPG := newBenchmarkHandler(pgRepo)
+	//pgRepo, _ := storage.NewPostgresRepository(configs.PostgresConfig{
+	//	DSN:          "postgresql://postgres:1211@localhost:5432/mcas",
+	//	MigrationDir: configs.PGMigrationDirDefault},
+	//)
+	handlerWithPG := newBenchmarkHandler(ramRepo)
 	b.Run("RAM UpdateJSONMetricsHandler", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			b.StopTimer()
