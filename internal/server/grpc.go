@@ -4,6 +4,7 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	_ "google.golang.org/grpc/encoding/gzip"
 	"net"
 
 	"github.com/unbeman/ya-prac-mcas/internal/controller"
@@ -19,7 +20,6 @@ type GRPCServer struct {
 
 func NewGRPCServer(addr string, control *controller.Controller, trustedSubnet *net.IPNet) *GRPCServer {
 	server := grpc.NewServer(grpc.UnaryInterceptor(handlers.IPCheckerServerInterceptor(trustedSubnet)))
-	//server := grpc.NewServer()
 	service := handlers.NewGRPCService(control)
 
 	return &GRPCServer{address: addr, server: server, service: service}
