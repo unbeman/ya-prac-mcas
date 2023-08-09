@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strings"
 )
 
 var ErrInvalidIP = errors.New("untrusted IP network")
@@ -14,8 +15,8 @@ func GetOutboundIP() (string, error) {
 		return "", err
 	}
 	defer conn.Close()
-
-	return conn.LocalAddr().String(), nil
+	ip := strings.Split(conn.LocalAddr().String(), ":")[0]
+	return ip, nil
 }
 
 func CheckIPBelongsNetwork(incomingIP string, trustedSubnet *net.IPNet) error {
