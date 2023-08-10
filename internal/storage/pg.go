@@ -231,8 +231,8 @@ func (p *postgresRepository) SetGauges(ctx context.Context, slice []metrics.Gaug
 }
 
 // Ping checks the PG connection is alive.
-func (p *postgresRepository) Ping() error {
-	return p.connection.Ping()
+func (p *postgresRepository) Ping(ctx context.Context) error {
+	return p.connection.PingContext(ctx)
 }
 
 // Shutdown closes the PG connection.

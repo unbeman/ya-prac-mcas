@@ -142,6 +142,6 @@ func (rs *ramRepository) Shutdown() error {
 }
 
 // Ping .
-func (rs *ramRepository) Ping() error {
+func (rs *ramRepository) Ping(ctx context.Context) error {
 	return nil
 }

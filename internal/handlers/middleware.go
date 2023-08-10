@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	log "github.com/sirupsen/logrus"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 
@@ -77,6 +78,23 @@ func DecryptMiddleware(privateKey *rsa.PrivateKey) func(next http.Handler) http.
 
 				request.Body = io.NopCloser(bytes.NewReader(data))
 				request.ContentLength = int64(len(data))
+			}
+			next.ServeHTTP(writer, request)
+		}
+		return http.HandlerFunc(fn)
+	}
+}
+
+func IPCheckerMiddleware(trustedSubnet *net.IPNet) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		fn := func(writer http.ResponseWriter, request *http.Request) {
+			if trustedSubnet != nil {
+				clientIP := request.Header.Get("X-Real-IP")
+
+				if err := utils.CheckIPBelongsNetwork(clientIP, trustedSubnet); err != nil {
+					http.Error(writer, err.Error(), http.StatusForbidden)
+					return
+				}
 			}
 			next.ServeHTTP(writer, request)
 		}
